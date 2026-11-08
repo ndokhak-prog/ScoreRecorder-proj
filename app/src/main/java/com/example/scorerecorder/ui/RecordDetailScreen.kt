@@ -68,13 +68,13 @@ fun RecordDetailScreen(
         mutableStateListOf(*Array(holes) { i -> base.getOrNull(i)?.takeIf { it > 0 } })
     }
     val players = remember(record) {
-        // 절대점수(A) 모드에서 미입력 저장값(0)은 '-'로 표시되도록 null 처리 (자동 알바트로스 방지)
-        val isR = record.scoreType == "R"
+        // 미입력(null)은 상대/절대점수 모두 '-'로 표시.
+        // 절대점수에서 저장된 0은 미입력으로 간주(자동 알바트로스 방지).
         record.players.map { p ->
             PlayerEdit(
                 name = p.name,
                 scores = mutableStateListOf(*Array(holes) { i ->
-                    p.scores.getOrNull(i)?.takeIf { isR || it != 0 }
+                    p.scores.getOrNull(i)?.takeIf { record.scoreType == "R" || it != 0 }
                 })
             )
         }.toMutableStateList()
@@ -98,6 +98,15 @@ fun RecordDetailScreen(
     var gameDate by remember { mutableStateOf(record.gameDate) }
     var nameEditIdx by remember { mutableStateOf<Int?>(null) }
     var showDatePick by remember { mutableStateOf(false) }
+
+    // 점수 입력 즉시 저장 (기록상세 화면은 그대로 유지)
+    fun saveNow() {
+        saveRecord(
+            storage, record, distances, pars, players, scoreType,
+            courseChecked, courseOrder, courseLetters, holes, gameDate
+        )
+        onRefresh()
+    }
 
     // 코스 드래그로 순서 변경 (1행 4개, 다른 행까지 이동가능)
     var dragIdx by remember { mutableStateOf(-1) }
@@ -368,18 +377,25 @@ fun RecordDetailScreen(
                     },
                     modifier = Modifier.weight(1f).height(48.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
-                ) { Text("저장", maxLines = 1) }
+                ) { Text("저장", maxLines = 1, fontSize = 12.sp) }
                 OutlinedButton(
                     onClick = { onEvaluate(place?.courseId ?: "", record.courseName, gameDate) },
                     modifier = Modifier.weight(1f).height(48.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
-                ) { Text("구장평가", maxLines = 1) }
+                ) { Text("구장평가", maxLines = 1, fontSize = 12.sp) }
                 OutlinedButton(
                     onClick = { if (dirty) confirmSave = true else onBack() },
                     modifier = Modifier.weight(1f).height(48.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("취소", maxLines = 1)
+                    Text("취소", maxLines = 1, fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = { onGoRecordList() },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Text("닫기", maxLines = 1, fontSize = 12.sp)
                 }
             }
         }
@@ -396,20 +412,20 @@ fun RecordDetailScreen(
                 onDismiss = { popupTarget = null },
                 onSelect = { v ->
                     players[pi].scores[hi] = v
-                    setDirty()
+                    saveNow()
                     popupTarget = null
                 },
                 // 해당홀의 참가선수 전체 점수 초기화
                 onResetHole = {
                     players.forEach { it.scores[hi] = null }
-                    setDirty()
+                    saveNow()
                     popupTarget = null
                 },
                 // 선택한 점수를 참가선수 전체에 동일하게 입력
                 onCopyToAll = { v ->
                     if (v != null) {
                         players.forEach { it.scores[hi] = v }
-                        setDirty()
+                        saveNow()
                     }
                     popupTarget = null
                 }
@@ -428,7 +444,8 @@ fun RecordDetailScreen(
             min = 1, max = 5)
     }
 
-    message?.let { InfoMessage(it, onDismiss = { message = null; onGoRecordList() }) }
+    // 저장 알림은 화면을 닫지 않는다 (이전화면/닫기 전까지 기록상세 유지)
+    message?.let { InfoMessage(it, onDismiss = { message = null }) }
 
     if (showBackConfirm) {
         ConfirmMessage(
@@ -476,7 +493,7 @@ fun RecordDetailScreen(
 }
 
 /** 편집 상태로부터 갱신된 ScoreRecord 생성 (합계/순위 재계산) */
-private fun buildUpdatedRecord(
+internal fun buildUpdatedRecord(
     record: ScoreRecord,
     distances: List<Int?>,
     pars: List<Int?>,
@@ -499,7 +516,8 @@ private fun buildUpdatedRecord(
         val isComplete = ranks[i] > 0
         PlayerScore(
             name = p.name,
-            scores = p.scores.map { it ?: 0 }.toMutableList<Int?>().apply { add(total) },
+            // 미입력(null)은 null 그대로 저장 → 다시 열어도 '-'로 표시
+            scores = p.scores.toMutableList<Int?>().apply { add(total) },
             total = total,
             rank = ranks[i],
             excluded = !isComplete

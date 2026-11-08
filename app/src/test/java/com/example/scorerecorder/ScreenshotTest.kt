@@ -316,6 +316,62 @@ class ScreenshotTest {
         }
     }
 
+    /** 기간 초기값이 설정(최근3개월 모드)을 따르는지 확인 (저장된 기간 2020-01 은 무시되어야 함) */
+    @Test
+    fun record_list_period_recent3() {
+        val storage = newStorage()
+        seedBase(storage)
+        storage.saveSettings(
+            storage.loadSettings().copy(
+                latestPeriodMode = 1,
+                latestPeriodFr = "202001",
+                latestPeriodTo = "202001"
+            )
+        )
+        snap("record_list_period_recent3") {
+            ScoreRecorderTheme {
+                RecordListScreen(storage, {}, {}, {})
+            }
+        }
+    }
+
+    /** 상대점수(R) 미입력 '-' 표시 + 하단 닫기 버튼 검증 */
+    @Test
+    @Config(qualifiers = "w411dp-h1600dp-420dpi")
+    fun record_detail_relative() {
+        val storage = newStorage()
+        seedBase(storage)
+        val base = buildRecord()
+        val ninePars = listOf(4, 5, 3, 4, 5, 4, 3, 5, 4)
+        val p1 = PlayerScore(
+            name = "홍길동",
+            scores = mutableListOf<Int?>(0, 1, -1, null, null, 2, null, null, null, ninePars.sum() + 2),
+            total = ninePars.sum() + 2,
+            rank = 0,
+            excluded = true
+        )
+        val p2 = PlayerScore(
+            name = "김철수",
+            scores = mutableListOf<Int?>(null, null, 0, 0, -2, null, null, 1, null, ninePars.sum() - 1),
+            total = ninePars.sum() - 1,
+            rank = 0,
+            excluded = true
+        )
+        val r = base.copy(
+            scoreType = "R",
+            totalHoles = 9,
+            pars = ninePars,
+            distances = ninePars.map { it * 100 },
+            players = mutableListOf(p1, p2)
+        )
+        storage.saveRecords(r.gameDate.take(4), listOf(r))
+        snap("record_detail_relative") {
+            ScoreRecorderTheme {
+                RecordDetailScreen(storage, r.gameId, {}, {}, {}, { _, _, _ -> })
+            }
+        }
+    }
+
     @Test
     fun course_list() {
         val storage = newStorage()

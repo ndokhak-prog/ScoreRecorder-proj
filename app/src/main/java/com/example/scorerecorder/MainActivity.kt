@@ -57,6 +57,14 @@ fun GolfApp(storage: Storage, onFinished: () -> Unit) {
         refreshKey++
     }
 
+    /** 닫기: 이미 열려 있는 기록 목록이 있으면 그 화면으로 돌아가고, 없으면 새로 연다 */
+    fun toRecordList() {
+        val idx = stack.lastIndexOf(ScreenKind.RecordList)
+        stack = if (idx >= 0) stack.take(idx + 1)
+                else listOf(ScreenKind.Main, ScreenKind.RecordList)
+        refreshKey++
+    }
+
     // 구장선택 결과를 신규경기로 전달
     fun applyCourseAndReturn(course: GolfCourse?) {
         if (course != null) selectedPlace = course
@@ -105,7 +113,7 @@ fun GolfApp(storage: Storage, onFinished: () -> Unit) {
                 gameId = bundle.gameId,
                 onBack = { selectedPlace = null; pop() },
                 onRefresh = { refreshKey++ },
-                onGoRecordList = { push(ScreenKind.RecordList) },
+                onGoRecordList = { toRecordList() },
                 onEvaluate = { cid, cname, date -> push(ScreenKind.CourseEvaluation, NavBundle(courseId = cid, courseName = cname, recordDate = date)) }
             )
         }

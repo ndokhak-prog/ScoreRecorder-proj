@@ -26,9 +26,11 @@ fun RecordListScreen(
     onOpen: (String) -> Unit,
     onNewGame: () -> Unit
 ) {
+    // 초기화면(MainScreen)과 동일한 규칙으로 설정에서 기간 초기값을 가져온다
     val settings = remember { storage.loadSettings() }
-    var fr by remember { mutableStateOf(settings.latestPeriodFr.ifEmpty { DateTimeUtils.currentYearMonth() }) }
-    var to by remember { mutableStateOf(settings.latestPeriodTo.ifEmpty { DateTimeUtils.currentYearMonth() }) }
+    val (initFr, initTo) = remember(settings) { settings.latestPeriodRange() }
+    var fr by remember { mutableStateOf(initFr) }
+    var to by remember { mutableStateOf(initTo) }
     var playerName by remember { mutableStateOf("") }
 
     var showFr by remember { mutableStateOf(false) }

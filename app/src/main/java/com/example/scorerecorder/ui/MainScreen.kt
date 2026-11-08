@@ -41,10 +41,7 @@ fun MainScreen(
     val viewType = settings.latestViewType
     val isDaily = viewType == 1
 
-    val recent3 = settings.latestPeriodMode == 1
-    val curYm = DateTimeUtils.currentYearMonth()
-    val fr = if (recent3) DateTimeUtils.recent3MonthsFr() else settings.latestPeriodFr
-    val to = if (recent3) curYm else settings.latestPeriodTo
+    val (fr, to) = settings.latestPeriodRange()
     val records = remember(fr, to, viewType, settings) {
         if (viewType == 1) storage.loadRecordsInPeriod(fr, to)
         else storage.loadRecordsInPeriod("000000", "999999")
