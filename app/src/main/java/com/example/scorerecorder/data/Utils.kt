@@ -54,6 +54,25 @@ object DateTimeUtils {
     fun parseYmDisplay(ym: String): String =
         if (ym.length == 6) "${ym.substring(0, 4)}-${ym.substring(4, 6)}" else ym
 
+    /**
+     * 직접 입력한 년월 문자열을 yyyymm 으로 변환한다. (실패 시 null)
+     * 허용: "2025-03", "2025.3", "202503", "20253"(=2025-03)
+     */
+    fun parseYmInput(input: String): String? {
+        val digits = input.filter { it.isDigit() }
+        val yearPart: String
+        val monthPart: String
+        when (digits.length) {
+            6 -> { yearPart = digits.substring(0, 4); monthPart = digits.substring(4, 6) }
+            5 -> { yearPart = digits.substring(0, 4); monthPart = "0" + digits.substring(4) }
+            else -> return null
+        }
+        if (yearPart.toIntOrNull() == null) return null
+        val month = monthPart.toIntOrNull() ?: return null
+        if (month !in 1..12) return null
+        return yearPart + monthPart
+    }
+
     /** yyyymmdd -> UTC 밀리sec (DatePicker용) */
     fun storedToMillis(date: String): Long? = try {
         java.time.LocalDate.parse(date, java.time.format.DateTimeFormatter.BASIC_ISO_DATE)

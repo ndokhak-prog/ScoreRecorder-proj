@@ -38,7 +38,7 @@ gradlew.bat assembleDebug
 gradlew.bat testDebugUnitTest
 ```
 
-테스트 실행 시 스크린샷은 `app/build/screenshots/` 에 생성됩니다.
+테스트 실행 시 스크린샷은 `app/build/screens/` 에 생성됩니다.
 
 ## 릴리즈 서명
 서명 키와 비밀번호는 저장소에 커밋하지 않습니다.

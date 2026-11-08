@@ -137,7 +137,7 @@ class RecordImageTest {
         val bg = RecordImage.loadBackground(ctx)
         val rec = sampleRecord().copy(totalHoles = 18, courseName = "제주회천")
         val bytes = RecordImage.encodeJpeg(RecordImage.render(rec, bg))
-        val dir = java.io.File("build/screenshots").apply { mkdirs() }
+        val dir = java.io.File("build/screens").apply { mkdirs() }
         java.io.File(dir, "record_card_sample.jpg").writeBytes(bytes)
         assertTrue("jpeg size=${bytes.size}", bytes.size <= 300 * 1024)
     }

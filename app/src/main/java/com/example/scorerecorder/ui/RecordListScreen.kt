@@ -3,11 +3,13 @@ package com.example.scorerecorder.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
@@ -192,26 +194,60 @@ fun RecordListScreen(
     message?.let { InfoMessage(it, onDismiss = { message = null }) }
 }
 
-/** yyyymm 선택 (현재월 초과 불가) - 재사용 */
+/** yyyymm 선택 + 직접 입력 (현재월 초과 불가) - 재사용 */
 @Composable
 private fun YearMonthPicker2(
     current: String,
     onPick: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var ym by remember { mutableStateOf(current.ifEmpty { DateTimeUtils.currentYearMonth() }) }
     val currentYm = DateTimeUtils.currentYearMonth()
+    var ym by remember { mutableStateOf(current.ifEmpty { currentYm }) }
+    // 직접 입력값: "2025-03" / "202503" / "20253" 모두 허용
+    var text by remember { mutableStateOf(DateTimeUtils.parseYmDisplay(current.ifEmpty { currentYm })) }
+
+    val typed = DateTimeUtils.parseYmInput(text)
+    val valid = typed != null && typed <= currentYm
+    // 어느 정도 입력이 끝난 상태에서 형식이 틀린 경우만 오류 표시
+    val showError = text.count { it.isDigit() } >= 5 && !valid
+
+    fun apply(newYm: String) {
+        ym = newYm
+        text = DateTimeUtils.parseYmDisplay(newYm)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("기간 선택") },
+        title = { Text("기간 입력") },
         text = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { ym = DateTimeUtils.addMonths(ym, -1) }) { Text("◀") }
-                Text(DateTimeUtils.parseYmDisplay(ym), fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                TextButton(onClick = { if (ym < currentYm) ym = DateTimeUtils.addMonths(ym, 1) }, enabled = ym < currentYm) { Text("▶") }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { v ->
+                        text = v.filter { it.isDigit() || it == '-' }.take(7)
+                        DateTimeUtils.parseYmInput(text)?.let { ym = it }
+                    },
+                    label = { Text("년월 직접 입력 (예: 2025-03)", fontSize = 12.sp) },
+                    singleLine = true,
+                    isError = showError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { apply(DateTimeUtils.addMonths(ym, -1)) }) { Text("◀") }
+                    Text(DateTimeUtils.parseYmDisplay(ym), fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                    TextButton(onClick = { if (ym < currentYm) apply(DateTimeUtils.addMonths(ym, 1)) }, enabled = ym < currentYm) { Text("▶") }
+                }
+                if (showError) {
+                    Text(
+                        "yyyy-MM 형식으로 입력하세요. (현재월까지만 조회 가능)",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
-        confirmButton = { TextButton(onClick = { onPick(ym) }, enabled = ym <= currentYm) { Text("선택") } },
+        confirmButton = { TextButton(onClick = { typed?.let(onPick) }, enabled = valid) { Text("조회") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("닫기") } }
     )
 }

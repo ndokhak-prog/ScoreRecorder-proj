@@ -1,6 +1,7 @@
 package com.example.scorerecorder.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -34,5 +35,26 @@ class PeriodRangeTest {
     fun recent3MonthsAcrossYearBoundary() {
         val s = GolfSettings(latestPeriodMode = 1)
         assertEquals("202412" to "202502", s.latestPeriodRange("202502"))
+    }
+
+    /** 기간 직접 입력 : 여러 표기를 yyyymm 으로 정규화 */
+    @Test
+    fun parseYmInput_acceptsCommonFormats() {
+        assertEquals("202503", DateTimeUtils.parseYmInput("2025-03"))
+        assertEquals("202503", DateTimeUtils.parseYmInput("202503"))
+        assertEquals("202503", DateTimeUtils.parseYmInput("20253"))
+        assertEquals("202503", DateTimeUtils.parseYmInput("2025.3"))
+        assertEquals("202503", DateTimeUtils.parseYmInput("2025-3"))
+        assertEquals("202512", DateTimeUtils.parseYmInput("2025-12"))
+    }
+
+    /** 기간 직접 입력 : 잘못된 값은 null */
+    @Test
+    fun parseYmInput_rejectsInvalid() {
+        assertNull(DateTimeUtils.parseYmInput(""))
+        assertNull(DateTimeUtils.parseYmInput("2025-13"))
+        assertNull(DateTimeUtils.parseYmInput("2025-00"))
+        assertNull(DateTimeUtils.parseYmInput("25-03"))
+        assertNull(DateTimeUtils.parseYmInput("2025-123"))
     }
 }

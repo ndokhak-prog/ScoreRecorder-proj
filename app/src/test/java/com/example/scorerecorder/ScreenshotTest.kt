@@ -35,14 +35,14 @@ import java.io.FileOutputStream
 
 /**
  * Robolectric로 실제 Compose 화면을 JVM에서 렌더링해 PNG 스크린샷을 저장한다.
- * (에뮬레이터/가상화 불필요)  app/build/screenshots 폴더에 PNG 생성
+ * (에뮬레이터/가상화 불필요)  app/build/screens 폴더에 PNG 생성
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-420dpi")
 class ScreenshotTest {
 
-    private val outDir = File("build/screenshots").apply { mkdirs() }
+    private val outDir = File("build/screens").apply { mkdirs() }
 
     private fun snap(name: String, content: @Composable () -> Unit) {
         val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
@@ -329,6 +329,25 @@ class ScreenshotTest {
             )
         )
         snap("record_list_period_recent3") {
+            ScoreRecorderTheme {
+                RecordListScreen(storage, {}, {}, {})
+            }
+        }
+    }
+
+    /** 기간 모드(0)에서는 저장된 기간(2020-01)을 그대로 사용 */
+    @Test
+    fun record_list_period_fixed() {
+        val storage = newStorage()
+        seedBase(storage)
+        storage.saveSettings(
+            storage.loadSettings().copy(
+                latestPeriodMode = 0,
+                latestPeriodFr = "202001",
+                latestPeriodTo = "202001"
+            )
+        )
+        snap("record_list_period_fixed") {
             ScoreRecorderTheme {
                 RecordListScreen(storage, {}, {}, {})
             }
