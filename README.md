@@ -1,6 +1,12 @@
 # ScoreRecorder-proj
 파크골프 스코어기록 카드앱 (N독학러 파크골프)
 
+## 다운로드 (APK)
+최신 버전은 [Releases](https://github.com/ndokhak-prog/ScoreRecorder-proj/releases/latest) 에서 받을 수 있습니다.
+
+- 파일: `ndokhak_parkScoreCard.apk`
+- 기존 앱이 설치되어 있으면 서명이 달라 업데이트가 되지 않으므로, 앱을 삭제한 뒤 설치하세요.
+
 ## 개요
 파크골프 라운드의 타수를 기록하고, 기록 카드 이미지를 만들고, 구장을 평가하는 Android 앱입니다.
 Kotlin + Jetpack Compose 로 작성되었습니다.
