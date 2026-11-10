@@ -255,7 +255,7 @@ fun CourseListScreen(
                     }
                     OutlinedButton(onClick = {
                         deleteConfirm = selected.size
-                    }, modifier = Modifier.weight(1f).height(44.dp), contentPadding = PaddingValues(horizontal = 4.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F))) {
+                    }, modifier = Modifier.weight(1f).height(44.dp), contentPadding = PaddingValues(horizontal = 4.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                         Text("삭제", fontSize = 12.sp, maxLines = 1)
                     }
                 }

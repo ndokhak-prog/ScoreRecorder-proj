@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -60,21 +61,15 @@ fun MainScreen(
             )
         },
         bottomBar = {
-            BottomAppBar {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(onClick = onNewGame, modifier = Modifier.weight(1f)) {
-                        Text("신규 경기", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
-                    }
-                    OutlinedButton(onClick = onRecordList, modifier = Modifier.weight(1f)) {
-                        Text("기록 목록", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
-                    }
-                    OutlinedButton(onClick = onCourseList, modifier = Modifier.weight(1f)) {
-                        Text("구장 정보", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
-                    }
+            AppBottomBar {
+                Button(onClick = onNewGame, modifier = Modifier.weight(1f)) {
+                    Text("신규 경기", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
+                }
+                OutlinedButton(onClick = onRecordList, modifier = Modifier.weight(1f)) {
+                    Text("기록 목록", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
+                }
+                OutlinedButton(onClick = onCourseList, modifier = Modifier.weight(1f)) {
+                    Text("구장 정보", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
                 }
             }
         }
@@ -87,13 +82,13 @@ fun MainScreen(
                 .padding(16.dp)
         ) {
             if (isDaily) {
-                // 기간 / 닉네임
+                // 기간 / 닉네임 — 딥네이비 시그니처 카드
                 Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    tonalElevation = 2.dp,
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         val periodText =
                             "기간 ${DateTimeUtils.parseYmDisplay(fr)} ~ ${DateTimeUtils.parseYmDisplay(to)}"
                         // 닉네임은 '프로' 포함 최대 7자리까지 잘리지 않게 표시 (자간/글자크기 조정)
@@ -101,6 +96,22 @@ fun MainScreen(
                             if (nickname.isNotEmpty()) (if (nickname.contains("프로")) nickname else "${nickname} 프로님")
                             else "선수 미등록"
                         val oneLine = "$periodText  $nickText"
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier
+                                    .size(6.dp)
+                                    .background(MaterialTheme.colorScheme.secondary, CircleShape)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "최근 기록",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.4.sp,
+                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f)
+                            )
+                        }
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             oneLine,
                             maxLines = 1,
@@ -113,8 +124,7 @@ fun MainScreen(
                                 else -> 14.sp
                             },
                             fontWeight = FontWeight.Bold,
-                            color = if (nickname.isEmpty()) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -161,7 +171,7 @@ private fun NdokhakBanner() {
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             "유튜브채널 N독학러",
-            color = Color(0xFF1A237E),
+            color = MaterialTheme.colorScheme.primary,
             textDecoration = TextDecoration.Underline,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
@@ -186,7 +196,7 @@ private fun DailyRecordView(
         Text("일자별", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(8.dp))
 
-        Card {
+        AppCard {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -244,7 +254,7 @@ private fun PlayerRecordView(
         Text("선수별", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(8.dp))
 
-        Card {
+        AppCard {
             if (latest == null) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("경기 기록이 없습니다.", color = MaterialTheme.colorScheme.onSurfaceVariant)

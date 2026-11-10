@@ -117,7 +117,7 @@ fun CourseEvaluationScreen(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // 제목 + 경기일
-                Card {
+                AppCard {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             "${courseName.ifEmpty { "구장" }} 파크골프장 평가",
@@ -135,7 +135,7 @@ fun CourseEvaluationScreen(
                 }
 
                 // 평가 항목 9개
-                Card {
+                AppCard {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
                         EvaluationEngine.ITEM_NAMES.forEachIndexed { i, name ->
                             EvalItemRow(
@@ -156,7 +156,7 @@ fun CourseEvaluationScreen(
                 }
 
                 // 총 평 (입력된 항목만 평균, 별은 0.5 단위 반올림)
-                Card {
+                AppCard {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -176,7 +176,7 @@ fun CourseEvaluationScreen(
                 }
 
                 // 특이사항 (100자 이내)
-                Card {
+                AppCard {
                     Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("특이사항", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
                         OutlinedTextField(
@@ -335,15 +335,15 @@ private fun PlusGlyph() {
     }
 }
 
-/** 별 표시 (0.5 단위 부분 별 지원): 골드 채움 + 빈 별 회색 */
+/** 별 표시 (0.5 단위 부분 별 지원): 앰버 채움 + 빈 별 회색 */
 @Composable
 fun StarRow(
     score: Float,
     modifier: Modifier = Modifier,
     starSize: Dp = 30.6f.dp,
     gap: Dp = 2.dp,
-    filledColor: Color = Color(0xFFC9A24B),
-    emptyColor: Color = Color(0xFFD8D3C7)
+    filledColor: Color = Color(0xFFD97706),
+    emptyColor: Color = Color(0xFFE2E8F0)
 ) {
     val fullWidth = starSize * 5 + gap * 4
     Canvas(modifier = modifier.defaultMinSize(minWidth = fullWidth).height(starSize)) {

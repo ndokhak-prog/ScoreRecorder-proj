@@ -137,7 +137,7 @@ fun CourseDetailScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Card {
+            AppCard {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("조회조건 ", fontSize = 13.sp)
@@ -193,7 +193,7 @@ fun CourseDetailScreen(
             }
 
             if (effHoles > 0) {
-                Card {
+                AppCard {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         val numC = (effHoles + 8) / 9
                         (0 until numC).map { idx -> ('A'.code + idx).toChar() }.chunked(2).forEach { pair ->

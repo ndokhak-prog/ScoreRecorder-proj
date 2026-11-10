@@ -119,7 +119,7 @@ fun NewGameScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Card {
+                AppCard {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("구장명 ", fontSize = 14.sp)
@@ -166,7 +166,7 @@ fun NewGameScreen(
             }
 
             item {
-                Card {
+                AppCard {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("홀", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Row {
@@ -216,7 +216,7 @@ fun NewGameScreen(
             }
 
             itemsIndexed(players) { idx, p ->
-                Card {
+                AppCard {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically

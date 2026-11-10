@@ -1,5 +1,6 @@
 package com.example.scorerecorder.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +21,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** 통일된 상단 바 (네이비 배경, 흰색 제목/아이콘, 제목 한 줄) */
+/**
+ * 통일된 상단 바
+ * 화이트 서피스 + 1px 헤어라인, 딥네이비 제목 (Sovereign Modernism)
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
@@ -28,45 +32,88 @@ fun AppTopBar(
     onNavigate: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-            actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-        ),
-        title = {
-            Text(
-                title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        navigationIcon = {
-            if (onNavigate != null) {
-                IconButton(onClick = onNavigate) {
-                    Text(
-                        "←",
-                        fontSize = 20.sp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+        TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                actionIconContentColor = MaterialTheme.colorScheme.primary
+            ),
+            title = {
+                Text(
+                    title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.2).sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            navigationIcon = {
+                if (onNavigate != null) {
+                    IconButton(onClick = onNavigate) {
+                        Text(
+                            "←",
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-            }
-        },
-        actions = actions
+            },
+            actions = actions
+        )
+        Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/**
+ * 기본 카드 — 화이트 + 16dp 라운드 + 1px 고스트 보더 (Level 1)
+ */
+@Composable
+fun AppCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        content = content
     )
+}
+
+/**
+ * 하단 액션 바 — 화이트 서피스 + 상단 헤어라인
+ */
+@Composable
+fun AppBottomBar(
+    content: @Composable RowScope.() -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+        Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
+        )
+    }
 }
 
 /** 입력 필드 통일 스타일 (입력 글자는 네이비/보통 굵기, 라벨은 회색) */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun inputFieldColors(): TextFieldColors = TextFieldDefaults.outlinedTextFieldColors(
-    focusedTextColor = MaterialTheme.colorScheme.primary,
-    unfocusedTextColor = MaterialTheme.colorScheme.primary,
-    focusedBorderColor = MaterialTheme.colorScheme.secondary,
-    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
     focusedLabelColor = MaterialTheme.colorScheme.primary,
     unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
     cursorColor = MaterialTheme.colorScheme.secondary
@@ -82,7 +129,7 @@ val InputTextStyle
 /** 통일된 섹션 카드 (네이비 굵은 섹션 제목) */
 @Composable
 fun AppSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card {
+    AppCard {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -231,8 +278,8 @@ fun CompactTextField(
             .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.small)
             .border(
                 1.dp,
-                if (enabled) MaterialTheme.colorScheme.outlineVariant
-                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                if (enabled) MaterialTheme.colorScheme.outline
+                else MaterialTheme.colorScheme.outlineVariant,
                 MaterialTheme.shapes.small
             )
             .padding(horizontal = 8.dp),

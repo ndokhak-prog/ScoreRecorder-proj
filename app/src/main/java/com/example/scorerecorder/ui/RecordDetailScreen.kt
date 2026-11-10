@@ -146,7 +146,7 @@ fun RecordDetailScreen(
                 .padding(16.dp)
         ) {
             // 정보 (경기일/선수명 편집 가능)
-            Card {
+            AppCard {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("구장명 : ${record.courseName}", fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -670,16 +670,16 @@ fun strokeMark(s: Int, par: Int): String {
 
 /** 변환 심볼별 고유 배경색 (ARGB). 심볼이 아니면 null */
 internal fun markColorArgb(mark: String): Int? = when (mark) {
-    "H" -> 0xFFFFD54F.toInt()    // 골드
-    "A" -> 0xFFBA68C8.toInt()    // 보라
-    "E" -> 0xFF4FC3F7.toInt()    // 하늘
-    "B" -> 0xFF81C784.toInt()    // 그린
-    "P" -> 0xFFFFF59D.toInt()    // 옅은 노랑
-    "+1" -> 0xFFFFCC80.toInt()   // 연오렌지
-    "+2" -> 0xFFFFB74D.toInt()   // 오렌지
-    "+3" -> 0xFFE57373.toInt()   // 연빨강
-    "+4" -> 0xFFD32F2F.toInt()   // 빨강
-    "2P" -> 0xFF90A4AE.toInt()   // 청회색
+    "H" -> 0xFFFCD34D.toInt()    // 앰버
+    "A" -> 0xFFC4B5FD.toInt()    // 바이올렛
+    "E" -> 0xFF7DD3FC.toInt()    // 스카이
+    "B" -> 0xFF6EE7B7.toInt()    // 에메랄드
+    "P" -> 0xFFE2E8F0.toInt()    // 슬레이트
+    "+1" -> 0xFFFED7AA.toInt()   // 연오렌지
+    "+2" -> 0xFFFDBA74.toInt()   // 오렌지
+    "+3" -> 0xFFFCA5A5.toInt()   // 연빨강
+    "+4" -> 0xFFF87171.toInt()   // 빨강
+    "2P" -> 0xFFCBD5E1.toInt()   // 청회색
     else -> null
 }
 
