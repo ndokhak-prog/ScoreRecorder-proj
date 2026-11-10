@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -20,10 +22,25 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.scorerecorder.ui.theme.CanvasGradient
+
+/** Scaffold 배경을 투명하게 해 앱 캔버스(블루 그라데이션)가 보이도록 한다 */
+val ScaffoldCanvasColor = Color.Transparent
+
+/** 앱 공통 캔버스 — 위→아래 블루 그라데이션 배경 */
+@Composable
+fun AppCanvas(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(CanvasGradient)),
+        content = content
+    )
+}
 
 /**
  * 통일된 상단 바
- * 화이트 서피스 + 1px 헤어라인, 딥네이비 제목 (Sovereign Modernism)
+ * 반투명 화이트 서피스(프로스트) + 딥 블루 제목 (Sovereign Modernism Blue)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,10 +49,14 @@ fun AppTopBar(
     onNavigate: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.86f))
+    ) {
         TopAppBar(
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = Color.Transparent,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                 actionIconContentColor = MaterialTheme.colorScheme.primary
@@ -63,12 +84,11 @@ fun AppTopBar(
             },
             actions = actions
         )
-        Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
 /**
- * 기본 카드 — 화이트 + 16dp 라운드 + 1px 고스트 보더 (Level 1)
+ * 기본 카드 — 화이트 + 24dp 라운드 + 소프트 섀도 + 화이트 헤어라인 (Level 1)
  */
 @Composable
 fun AppCard(
@@ -79,30 +99,35 @@ fun AppCard(
         modifier = modifier,
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp, pressedElevation = 2.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
         content = content
     )
 }
 
 /**
- * 하단 액션 바 — 화이트 서피스 + 상단 헤어라인
+ * 하단 액션 바 — 반투명 화이트 서피스 + 상단 헤어라인 + 위쪽 섀도
  */
 @Composable
 fun AppBottomBar(
     content: @Composable RowScope.() -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
-        Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content
-        )
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        shadowElevation = 10.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
+            )
+        }
     }
 }
 
@@ -165,6 +190,7 @@ fun TextInputDialog(
 ) {
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onDismiss,
         title = {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary, maxLines = 1)
@@ -223,6 +249,7 @@ fun ComboDialog(
     onDismiss: () -> Unit
 ) {
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onDismiss,
         title = {
             Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary, maxLines = 1)
@@ -401,6 +428,7 @@ fun InfoMessage(
     title: String = "알림"
 ) {
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onDismiss,
         title = { Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary, maxLines = 1) },
         text = { Text(text, fontSize = 15.sp) },
@@ -417,6 +445,7 @@ fun ConfirmMessage(
     title: String = "확인"
 ) {
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onNo,
         title = { Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary, maxLines = 1) },
         text = { Text(text, fontSize = 15.sp) },
@@ -454,6 +483,7 @@ fun DatePickDialog(
     )
     DatePickerDialog(
         onDismissRequest = onDismiss,
+        colors = DatePickerDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
         confirmButton = {
             TextButton(onClick = {
                 mState.selectedDateMillis?.let { onPick(com.example.scorerecorder.data.DateTimeUtils.millisToStored(it)) }

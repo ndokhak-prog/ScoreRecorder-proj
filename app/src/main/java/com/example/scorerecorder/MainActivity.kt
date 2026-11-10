@@ -72,90 +72,93 @@ fun GolfApp(storage: Storage, onFinished: () -> Unit) {
         refreshKey++
     }
 
-    when (stack.last()) {
-        ScreenKind.Main -> {
-            MainScreen(
-                storage = storage,
-                onSettings = { push(ScreenKind.Settings, NavBundle(fromInitial = true)) },
-                onNewGame = { push(ScreenKind.NewGame) },
-                onRecordList = { push(ScreenKind.RecordList) },
-                onCourseList = { push(ScreenKind.CourseList) },
-                onRecordDetail = { id -> push(ScreenKind.RecordDetail, NavBundle(gameId = id)) }
-            )
-            if (refreshKey > 0) { /* Main 재조회는 자체 recompute */ }
-        }
+    // 모든 화면 위에 블루 그라데이션 캔버스를 깔고, 화면은 투명 Scaffold 로 얹는다.
+    AppCanvas {
+        when (stack.last()) {
+            ScreenKind.Main -> {
+                MainScreen(
+                    storage = storage,
+                    onSettings = { push(ScreenKind.Settings, NavBundle(fromInitial = true)) },
+                    onNewGame = { push(ScreenKind.NewGame) },
+                    onRecordList = { push(ScreenKind.RecordList) },
+                    onCourseList = { push(ScreenKind.CourseList) },
+                    onRecordDetail = { id -> push(ScreenKind.RecordDetail, NavBundle(gameId = id)) }
+                )
+                if (refreshKey > 0) { /* Main 재조회는 자체 recompute */ }
+            }
 
-        ScreenKind.Settings -> {
-            SettingsScreen(
-                storage = storage,
-                onBack = { pop() },
-                onSaved = { toMain() }
-            )
-        }
+            ScreenKind.Settings -> {
+                SettingsScreen(
+                    storage = storage,
+                    onBack = { pop() },
+                    onSaved = { toMain() }
+                )
+            }
 
-        ScreenKind.NewGame -> {
-            NewGameScreen(
-                storage = storage,
-                initial = bundle,
-                selectedPlace = selectedPlace,
-                onBack = { pop() },
-                onGoCourseList = { push(ScreenKind.CourseList, NavBundle(fromInitial = false), "") },
-                onSaved = { id, isNew ->
-                    selectedPlace = null
-                    push(ScreenKind.RecordDetail, NavBundle(gameId = id, isNew = isNew))
-                }
-            )
-        }
+            ScreenKind.NewGame -> {
+                NewGameScreen(
+                    storage = storage,
+                    initial = bundle,
+                    selectedPlace = selectedPlace,
+                    onBack = { pop() },
+                    onGoCourseList = { push(ScreenKind.CourseList, NavBundle(fromInitial = false), "") },
+                    onSaved = { id, isNew ->
+                        selectedPlace = null
+                        push(ScreenKind.RecordDetail, NavBundle(gameId = id, isNew = isNew))
+                    }
+                )
+            }
 
-        ScreenKind.RecordDetail -> {
-            RecordDetailScreen(
-                storage = storage,
-                gameId = bundle.gameId,
-                onBack = { selectedPlace = null; pop() },
-                onRefresh = { refreshKey++ },
-                onGoRecordList = { toRecordList() },
-                onEvaluate = { cid, cname, date -> push(ScreenKind.CourseEvaluation, NavBundle(courseId = cid, courseName = cname, recordDate = date)) }
-            )
-        }
+            ScreenKind.RecordDetail -> {
+                RecordDetailScreen(
+                    storage = storage,
+                    gameId = bundle.gameId,
+                    onBack = { selectedPlace = null; pop() },
+                    onRefresh = { refreshKey++ },
+                    onGoRecordList = { toRecordList() },
+                    onEvaluate = { cid, cname, date -> push(ScreenKind.CourseEvaluation, NavBundle(courseId = cid, courseName = cname, recordDate = date)) }
+                )
+            }
 
-        ScreenKind.CourseList -> {
-            CourseListScreen(
-                storage = storage,
-                selectForNewGame = stack.size >= 2 && stack[stack.size - 2] == ScreenKind.NewGame,
-                onBack = { pop() },
-                onAddCourse = { push(ScreenKind.CourseDetail, cid = "") },
-                onEditCourse = { cid -> push(ScreenKind.CourseDetail, cid = cid) },
-                onSelectCourse = { c -> applyCourseAndReturn(c) },
-                onRefresh = { refreshKey++ },
-                onEvaluate = { cid, cname -> push(ScreenKind.CourseEvaluation, NavBundle(courseId = cid, courseName = cname)) }
-            )
-        }
+            ScreenKind.CourseList -> {
+                CourseListScreen(
+                    storage = storage,
+                    selectForNewGame = stack.size >= 2 && stack[stack.size - 2] == ScreenKind.NewGame,
+                    onBack = { pop() },
+                    onAddCourse = { push(ScreenKind.CourseDetail, cid = "") },
+                    onEditCourse = { cid -> push(ScreenKind.CourseDetail, cid = cid) },
+                    onSelectCourse = { c -> applyCourseAndReturn(c) },
+                    onRefresh = { refreshKey++ },
+                    onEvaluate = { cid, cname -> push(ScreenKind.CourseEvaluation, NavBundle(courseId = cid, courseName = cname)) }
+                )
+            }
 
-        ScreenKind.CourseDetail -> {
-            CourseDetailScreen(
-                storage = storage,
-                courseId = courseId,
-                onBack = { pop() },
-                onSaved = { pop(); refreshKey++ },
-                onEvaluate = { cid, cname -> push(ScreenKind.CourseEvaluation, NavBundle(courseId = cid, courseName = cname)) }
-            )
-        }
+            ScreenKind.CourseDetail -> {
+                CourseDetailScreen(
+                    storage = storage,
+                    courseId = courseId,
+                    onBack = { pop() },
+                    onSaved = { pop(); refreshKey++ },
+                    onEvaluate = { cid, cname -> push(ScreenKind.CourseEvaluation, NavBundle(courseId = cid, courseName = cname)) }
+                )
+            }
 
-        ScreenKind.RecordList -> {
-            RecordListScreen(
-                storage = storage,
-                onBack = { pop() },
-                onOpen = { id -> push(ScreenKind.RecordDetail, NavBundle(gameId = id)) },
-                onNewGame = { push(ScreenKind.NewGame) }
-            )
-        }
+            ScreenKind.RecordList -> {
+                RecordListScreen(
+                    storage = storage,
+                    onBack = { pop() },
+                    onOpen = { id -> push(ScreenKind.RecordDetail, NavBundle(gameId = id)) },
+                    onNewGame = { push(ScreenKind.NewGame) }
+                )
+            }
 
-        ScreenKind.CourseEvaluation -> {
-            CourseEvaluationScreen(
-                storage = storage,
-                initial = bundle,
-                onBack = { pop() }
-            )
+            ScreenKind.CourseEvaluation -> {
+                CourseEvaluationScreen(
+                    storage = storage,
+                    initial = bundle,
+                    onBack = { pop() }
+                )
+            }
         }
     }
 }

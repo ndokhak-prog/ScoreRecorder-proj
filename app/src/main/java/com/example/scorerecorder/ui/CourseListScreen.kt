@@ -1,4 +1,4 @@
-﻿package com.example.scorerecorder.ui
+package com.example.scorerecorder.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -94,6 +94,7 @@ fun CourseListScreen(
     }
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "구장 정보",
@@ -278,6 +279,7 @@ fun CourseListScreen(
 
     if (proceedSelect) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface,
             onDismissRequest = { proceedSelect = false },
             title = { Text("구장정보 선택") },
             text = { Text("구장정보 선택 체크박스를 하나만 선택하세요. (1건만 선택 가능)\n계속 진행하시면 선택 없이 구장관리 화면으로 이동합니다.") },

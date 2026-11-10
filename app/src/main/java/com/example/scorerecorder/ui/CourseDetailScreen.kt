@@ -122,6 +122,7 @@ fun CourseDetailScreen(
     }
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "구장 상세",

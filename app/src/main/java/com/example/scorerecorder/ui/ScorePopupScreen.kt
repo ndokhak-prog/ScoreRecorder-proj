@@ -54,6 +54,7 @@ fun ScorePopupScreen(
     }
 
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onDismiss,
         title = { Text(text = if (scoreType == "R") "상대점수 (기준타 대비)" else "절대점수 선택", fontSize = 16.sp) },
         text = {

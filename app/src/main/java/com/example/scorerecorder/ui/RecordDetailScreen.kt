@@ -37,7 +37,10 @@ fun RecordDetailScreen(
     val record = remember(gameId) { storage.loadRecordById(gameId)?.second }
 
     if (record == null) {
-        Scaffold(topBar = { AppTopBar(title = "기록상세", onNavigate = onBack) }) { p ->
+        Scaffold(
+            containerColor = ScaffoldCanvasColor,
+            topBar = { AppTopBar(title = "기록상세", onNavigate = onBack) }
+        ) { p ->
             Box(Modifier.fillMaxSize().padding(p), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("경기기록을 찾을 수 없습니다.")
@@ -129,6 +132,7 @@ fun RecordDetailScreen(
     }
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "기록 상세",
@@ -721,6 +725,7 @@ fun SingleValuePopup(
     var text by remember { mutableStateOf(initial.coerceIn(min, max).takeIf { it > 0 }?.toString() ?: "") }
     fun current(): Int = (text.filter { it.isDigit() }.toIntOrNull() ?: min).coerceIn(min, max)
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onDismiss,
         title = { Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold) },
         text = {

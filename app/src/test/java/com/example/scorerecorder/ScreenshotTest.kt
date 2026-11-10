@@ -15,6 +15,7 @@ import com.example.scorerecorder.data.NavBundle
 import com.example.scorerecorder.data.PlayerScore
 import com.example.scorerecorder.data.ScoreRecord
 import com.example.scorerecorder.data.Storage
+import com.example.scorerecorder.ui.AppCanvas
 import com.example.scorerecorder.ui.CourseDetailScreen
 import com.example.scorerecorder.ui.CourseListScreen
 import com.example.scorerecorder.ui.MainScreen
@@ -47,7 +48,8 @@ class ScreenshotTest {
     private fun snap(name: String, content: @Composable () -> Unit) {
         val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
         val view = ComposeView(activity)
-        view.setContent(content)
+        // 실제 앱(GolfApp)과 동일하게 블루 그라데이션 캔버스 위에 화면을 얹는다.
+        view.setContent { AppCanvas { content() } }
         activity.setContentView(view)
 
         ShadowLooper.idleMainLooper()

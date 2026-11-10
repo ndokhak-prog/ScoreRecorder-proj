@@ -101,6 +101,7 @@ fun CourseEvaluationScreen(
     }
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "구장평가",
@@ -343,7 +344,7 @@ fun StarRow(
     starSize: Dp = 30.6f.dp,
     gap: Dp = 2.dp,
     filledColor: Color = Color(0xFFD97706),
-    emptyColor: Color = Color(0xFFE2E8F0)
+    emptyColor: Color = Color(0xFFD9E2EC)
 ) {
     val fullWidth = starSize * 5 + gap * 4
     Canvas(modifier = modifier.defaultMinSize(minWidth = fullWidth).height(starSize)) {

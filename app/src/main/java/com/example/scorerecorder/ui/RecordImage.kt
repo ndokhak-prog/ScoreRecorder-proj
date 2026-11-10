@@ -42,14 +42,14 @@ object RecordImage {
 
     /** 배경이미지 채도 배수 (12배 진하게) */
     const val BG_SATURATION = 12f
-    private val NAVY = Color.parseColor("#0D1B2A")
+    private val NAVY = Color.parseColor("#002B5B")
     private val GOLD = Color.parseColor("#2563EB")
-    private val BLACK = Color.parseColor("#0F172A")
-    private val GRAY = Color.parseColor("#64748B")
-    private val LINE = Color.parseColor("#E2E8F0")
-    private val HEAD_BG = Color.parseColor("#0D1B2A")
-    private val TOTAL_BG = Color.parseColor("#F1F5F9")
-    private val SUB_BG = Color.parseColor("#F8FAFC")
+    private val BLACK = Color.parseColor("#111827")
+    private val GRAY = Color.parseColor("#627D98")
+    private val LINE = Color.parseColor("#D9E2EC")
+    private val HEAD_BG = Color.parseColor("#002B5B")
+    private val TOTAL_BG = Color.parseColor("#F0F4F8")
+    private val SUB_BG = Color.parseColor("#F4F7FA")
 
     /** 배경 이미지 로드 (없으면 null) */
     fun loadBackground(context: Context): Bitmap? = try {

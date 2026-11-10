@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +52,7 @@ fun MainScreen(
     val nickname = settings.nickname
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "N독학러(@ndokhak) 파크골프",
@@ -82,11 +85,16 @@ fun MainScreen(
                 .padding(16.dp)
         ) {
             if (isDaily) {
-                // 기간 / 닉네임 — 딥네이비 시그니처 카드
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth()
+                // 기간 / 닉네임 — 블루 시그니처 카드
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(Color(0xFF002B5B), Color(0xFF1B4B85))
+                            )
+                        )
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         val periodText =

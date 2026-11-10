@@ -197,6 +197,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "설정",
@@ -501,6 +502,7 @@ private fun YearMonthPicker(
     val currentYm = DateTimeUtils.currentYearMonth()
 
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onDismiss,
         title = { Text("기간 선택") },
         text = {

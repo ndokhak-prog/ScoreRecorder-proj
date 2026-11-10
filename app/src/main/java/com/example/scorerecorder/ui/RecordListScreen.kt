@@ -49,6 +49,7 @@ fun RecordListScreen(
     }
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "기록 목록",
@@ -217,6 +218,7 @@ private fun YearMonthPicker2(
     }
 
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
         onDismissRequest = onDismiss,
         title = { Text("기간 입력") },
         text = {

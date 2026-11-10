@@ -105,6 +105,7 @@ fun NewGameScreen(
     }
 
     Scaffold(
+        containerColor = ScaffoldCanvasColor,
         topBar = {
             AppTopBar(
                 title = "신규 경기",
