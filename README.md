@@ -4,7 +4,8 @@
 ## 다운로드 (APK)
 최신 버전은 [Releases](https://github.com/ndokhak-prog/ScoreRecorder-proj/releases/latest) 에서 받을 수 있습니다.
 
-- 파일: `ndokhak_parkScoreCard.apk`
+- 파일: `ndokhak_parkScoreCard.apk` (릴리즈, 서명됨)
+- 디버그: `ndokhak_parkScoreCard-debug.apk` (테스트용, 디버그 키 서명)
 - 기존 앱이 설치되어 있으면 서명이 달라 업데이트가 되지 않으므로, 앱을 삭제한 뒤 설치하세요.
 
 ## 개요

@@ -72,7 +72,10 @@ android {
 
     applicationVariants.all {
         outputs.all {
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "ndokhak_parkScoreCard.apk"
+            // debug/release 산출물 이름을 구분해 혼동 방지
+            val suffix = if (buildType.name == "debug") "-debug" else ""
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "ndokhak_parkScoreCard$suffix.apk"
         }
     }
 }

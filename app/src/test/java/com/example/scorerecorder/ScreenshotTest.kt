@@ -42,7 +42,7 @@ import java.io.FileOutputStream
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-420dpi")
 class ScreenshotTest {
 
-    private val outDir = File("build/screens").apply { mkdirs() }
+    private val outDir = testOutputDir()
 
     private fun snap(name: String, content: @Composable () -> Unit) {
         val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
