@@ -2,6 +2,8 @@ package com.example.scorerecorder.data
 
 import android.content.Context
 import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import java.io.File
 
@@ -205,8 +207,16 @@ class Storage(private val context: Context) {
     }
 
     // ---------- 내보내기 / 가져오기 ----------
-    /** 구장정보 전체를 JSON 문자열로 내보내기 */
-    fun exportPlacesJson(): String = gson.toJson(loadPlaces())
+    /**
+     * 구장정보 + 구장평가 전체를 JSON 문자열로 내보내기.
+     * 형식: { "places": [...], "evaluations": [...] }
+     */
+    fun exportPlacesJson(): String {
+        val root = JsonObject()
+        root.add("places", gson.toJsonTree(loadPlaces()))
+        root.add("evaluations", gson.toJsonTree(loadEvaluations()))
+        return gson.toJson(root)
+    }
 
     /** 경기기록 전체(모든 년도)를 JSON 문자열로 내보내기 */
     fun exportRecordsJson(): String {
@@ -215,28 +225,75 @@ class Storage(private val context: Context) {
     }
 
     /**
-     * 구장정보 병합 가져오기 (courseId 기준).
-     * 동일 courseId는 가져온 값으로 대체, 신규 courseId는 추가.
-     * @return (신규 건수, 병합 후 전체 건수)
+     * 구장정보 + 구장평가 병합 가져오기.
+     *  - 구장: courseId 기준 (동일 courseId는 가져온 값으로 대체, 신규는 추가)
+     *  - 평가: courseId(없으면 구장명) 기준 (동일 구장 평가는 가져온 값으로 대체)
+     *  - 구버전 파일(구장정보 배열만 있는 JSON)도 그대로 가져올 수 있다.
      */
-    fun importPlacesJson(json: String): Pair<Int, Int> {
-        val type = object : TypeToken<List<GolfCourse>>() {}.type
-        val imported: List<GolfCourse> = try {
-            gson.fromJson<List<GolfCourse>>(json, type) ?: emptyList()
+    fun importPlacesJson(json: String): PlaceImportResult {
+        val (importedPlaces, importedEvals) = try {
+            parsePlacesBundle(json)
         } catch (e: Exception) {
             throw IllegalArgumentException("구장정보 파일 형식이 올바르지 않습니다.")
         }
+
+        // --- 구장정보 병합 ---
         val map = LinkedHashMap<String, GolfCourse>()
         loadPlaces().forEach { if (it.courseId.isNotBlank()) map[it.courseId] = it }
         var added = 0
-        imported.forEach { c ->
+        importedPlaces.forEach { c ->
             if (c.courseId.isBlank()) return@forEach
             if (!map.containsKey(c.courseId)) added++
             map[c.courseId] = c
         }
         val merged = map.values.toList()
         savePlaces(merged)
-        return added to merged.size
+
+        // --- 구장평가 병합 ---
+        val evalMap = LinkedHashMap<String, CourseEvaluation>()
+        loadEvaluations().forEach { ev -> evalKey(ev)?.let { evalMap[it] = ev } }
+        var evalAdded = 0
+        importedEvals.forEach { ev ->
+            val key = evalKey(ev) ?: return@forEach
+            val prev = evalMap[key]
+            if (prev == null) evalAdded++
+            // 같은 항목이면 기존 evalId 유지 (파일 값으로 나머지 대체)
+            val id = prev?.evalId?.ifBlank { null } ?: ev.evalId.ifBlank { IdGen.unique() }
+            evalMap[key] = ev.copy(evalId = id)
+        }
+        saveEvaluations(evalMap.values.toList())
+
+        return PlaceImportResult(
+            added = added,
+            total = merged.size,
+            evalAdded = evalAdded,
+            evalTotal = evalMap.size
+        )
+    }
+
+    /** 구장평가 병합 키 (구장 1건 원칙: courseId → 구장명 → evalId 순) */
+    private fun evalKey(ev: CourseEvaluation): String? = when {
+        ev.courseId.isNotBlank() -> "C:${ev.courseId}"
+        CleanRules.cleanCourseName(ev.courseName).isNotBlank() ->
+            "N:${CleanRules.cleanCourseName(ev.courseName)}"
+        ev.evalId.isNotBlank() -> "E:${ev.evalId}"
+        else -> null
+    }
+
+    /** 내보내기 파일 파싱: 신형({places,evaluations}) + 구형(구장정보 배열) 모두 지원 */
+    private fun parsePlacesBundle(json: String): Pair<List<GolfCourse>, List<CourseEvaluation>> {
+        val element = JsonParser.parseString(json)
+        val placesType = object : TypeToken<List<GolfCourse>>() {}.type
+        val evalType = object : TypeToken<List<CourseEvaluation>>() {}.type
+        if (element.isJsonArray) {
+            val places: List<GolfCourse> = gson.fromJson(element, placesType) ?: emptyList()
+            return places to emptyList()
+        }
+        if (!element.isJsonObject) throw IllegalArgumentException("형식 오류")
+        val obj = element.asJsonObject
+        val places: List<GolfCourse> = obj.get("places")?.let { gson.fromJson(it, placesType) } ?: emptyList()
+        val evals: List<CourseEvaluation> = obj.get("evaluations")?.let { gson.fromJson(it, evalType) } ?: emptyList()
+        return places to evals
     }
 
     /**
@@ -283,3 +340,11 @@ class Storage(private val context: Context) {
         const val HOLE_PRESETS = "9,18,27,36"
     }
 }
+
+/** 구장정보(+구장평가) 가져오기 결과 */
+data class PlaceImportResult(
+    val added: Int,
+    val total: Int,
+    val evalAdded: Int,
+    val evalTotal: Int
+)

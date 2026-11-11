@@ -66,7 +66,7 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             message = if (writeJsonToUri(context, uri, storage.exportPlacesJson()))
-                "구장정보 내보내기가 완료되었습니다." else "구장정보 내보내기에 실패했습니다."
+                "구장정보 내보내기가 완료되었습니다. (구장평가 포함)" else "구장정보 내보내기에 실패했습니다."
         }
     }
     val exportRecordsLauncher = rememberLauncherForActivityResult(
@@ -85,8 +85,9 @@ fun SettingsScreen(
             message = when {
                 json == null -> "구장정보 파일을 읽을 수 없습니다."
                 else -> try {
-                    val (added, total) = storage.importPlacesJson(json)
-                    "구장정보 가져오기 완료 (신규 ${added}건 / 전체 ${total}건)"
+                    val r = storage.importPlacesJson(json)
+                    "구장정보 가져오기 완료 (구장 신규 ${r.added}건 / 전체 ${r.total}건, " +
+                        "평가 신규 ${r.evalAdded}건 / 전체 ${r.evalTotal}건)"
                 } catch (e: Exception) {
                     "구장정보 가져오기 실패: ${e.message}"
                 }
@@ -371,7 +372,7 @@ Row {
             // 데이터 내보내기 / 가져오기
             Section("데이터 내보내기 / 가져오기") {
                 DataIoRow(
-                    label = "구장정보",
+                    label = "구장정보+평가",
                     onExport = { exportPlacesLauncher.launch("구장정보_${DateTimeUtils.todayStored()}.json") },
                     onImport = { importPlacesLauncher.launch(JSON_MIME) }
                 )
@@ -381,7 +382,9 @@ Row {
                     onImport = { importRecordsLauncher.launch(JSON_MIME) }
                 )
                 Text(
-                    "내보내기: 저장 위치를 선택하면 JSON 파일이 생성됩니다.\n가져오기: 기존 데이터와 병합됩니다(같은 항목은 파일 값으로 대체).",
+                    "내보내기: 저장 위치를 선택하면 JSON 파일이 생성됩니다.\n" +
+                        "구장정보 파일에는 구장평가(별점·총평·특이사항)도 함께 저장됩니다.\n" +
+                        "가져오기: 기존 데이터와 병합됩니다(같은 항목은 파일 값으로 대체).",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

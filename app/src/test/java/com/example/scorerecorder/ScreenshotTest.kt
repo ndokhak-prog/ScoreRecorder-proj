@@ -447,4 +447,55 @@ class ScreenshotTest {
             }
         }
     }
+
+    // ---------- 가로모드(회전) 레이아웃 확인 ----------
+
+    @Test
+    @Config(qualifiers = "w891dp-h411dp-land-420dpi")
+    fun main_daily_land() {
+        val storage = newStorage()
+        seedBase(storage)
+        storage.saveSettings(storage.loadSettings().copy(latestViewType = 1))
+        snap("main_daily_land") {
+            ScoreRecorderTheme {
+                MainScreen(storage, {}, {}, {}, {}, {})
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w891dp-h411dp-land-420dpi")
+    fun record_detail_land() {
+        val storage = newStorage()
+        seedBase(storage)
+        snap("record_detail_land") {
+            ScoreRecorderTheme {
+                RecordDetailScreen(
+                    storage = storage,
+                    gameId = buildRecord().gameId,
+                    onBack = {},
+                    onRefresh = {},
+                    onGoRecordList = {},
+                    onEvaluate = { _, _, _ -> }
+                )
+            }
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w891dp-h411dp-land-420dpi")
+    fun course_evaluation_land() {
+        val storage = newStorage()
+        seedBase(storage)
+        seedEvaluation(storage)
+        snap("course_evaluation_land") {
+            ScoreRecorderTheme {
+                com.example.scorerecorder.ui.CourseEvaluationScreen(
+                    storage = storage,
+                    initial = NavBundle(courseId = "C001", courseName = "떼제베파크 CC"),
+                    onBack = {}
+                )
+            }
+        }
+    }
 }

@@ -3,7 +3,9 @@ package com.example.scorerecorder.data
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -47,6 +49,86 @@ class StorageIoTest {
         assertThrows(IllegalArgumentException::class.java) {
             storage.importPlacesJson("{not json}")
         }
+    }
+
+    @Test
+    fun places_export_thenImport_restoresEvaluations() {
+        storage.savePlaces(listOf(GolfCourse(courseId = "C1", courseName = "가")))
+        storage.saveEvaluation(
+            CourseEvaluation(
+                courseId = "C1",
+                courseName = "가",
+                gameDate = "20261101",
+                scores = mutableListOf(5f, 4f, null, null, null, null, null, null, null),
+                remark = "잔디 좋음",
+                total = 4.5f,
+                updateDate = "2026-11-01 10:00:00"
+            )
+        )
+        val exported = storage.exportPlacesJson()
+        assertTrue("구장평가가 내보내기에 포함되어야 함", exported.contains("evaluations"))
+
+        // 다른 기기(빈 저장소)로 가정하고 비운 뒤 가져오기
+        storage.savePlaces(emptyList())
+        storage.saveEvaluations(emptyList())
+
+        val r = storage.importPlacesJson(exported)
+
+        assertEquals(1, r.added)
+        assertEquals(1, r.total)
+        assertEquals(1, r.evalAdded)
+        assertEquals(1, r.evalTotal)
+        assertEquals("가", storage.loadPlaces().single().courseName)
+
+        val ev = storage.loadEvaluations().single()
+        assertEquals("C1", ev.courseId)
+        assertEquals("잔디 좋음", ev.remark)
+        assertEquals("20261101", ev.gameDate)
+        assertEquals(4.5f, ev.total, 0.001f)
+        assertEquals(5f, ev.scores[0]!!, 0.001f)
+        assertNull(ev.scores[2])
+        assertTrue(ev.evalId.isNotBlank())
+    }
+
+    @Test
+    fun places_import_mergesEvaluationsByCourseId() {
+        storage.savePlaces(emptyList())
+        storage.saveEvaluations(
+            listOf(
+                CourseEvaluation(
+                    evalId = "E1", courseId = "C1", courseName = "가",
+                    remark = "이전", total = 3f, updateDate = "2026-01-01 00:00:00"
+                )
+            )
+        )
+
+        val json = """
+            {"places":[{"courseId":"C1","courseName":"가"}],
+             "evaluations":[{"evalId":"E9","courseId":"C1","courseName":"가",
+                             "remark":"새값","total":4.2,"updateDate":"2026-02-02 00:00:00"}]}
+        """.trimIndent()
+
+        val r = storage.importPlacesJson(json)
+
+        assertEquals(0, r.evalAdded)     // 같은 구장 → 신규 아님(대체)
+        assertEquals(1, r.evalTotal)
+        val ev = storage.loadEvaluations().single()
+        assertEquals("새값", ev.remark)
+        assertEquals(4.2f, ev.total, 0.001f)
+        assertEquals("E1", ev.evalId)    // 기존 평가 id 유지
+    }
+
+    @Test
+    fun places_import_oldArrayFormat_stillWorks() {
+        storage.savePlaces(emptyList())
+        storage.saveEvaluations(emptyList())
+
+        val r = storage.importPlacesJson("""[{"courseId":"C9","courseName":"옛형식"}]""")
+
+        assertEquals(1, r.added)
+        assertEquals(1, r.total)
+        assertEquals(0, r.evalTotal)     // 구버전 파일에는 평가 없음
+        assertEquals("옛형식", storage.loadPlaces().single().courseName)
     }
 
     @Test
