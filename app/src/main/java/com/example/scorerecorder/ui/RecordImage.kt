@@ -18,6 +18,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import com.example.scorerecorder.R
+import com.example.scorerecorder.data.CourseCodes
 import com.example.scorerecorder.data.ScoreRecord
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -75,6 +76,7 @@ object RecordImage {
         val totH = 50
         val subH = 44
         val courseN = (holeN + 8) / 9
+        val codes = CourseCodes.forRecord(rec)
         // 단일 코스(9홀) 경기에서는 코스 소계 행을 표시하지 않는다(합계와 중복 방지)
         val subRows = if (courseN > 1) courseN else 0
         val rankH = 70 + pCnt * 34
@@ -152,7 +154,7 @@ object RecordImage {
         for (i in 0 until holeN) {
             val bot = rowY + rowH
             val base = bot - 12f
-            canvas.drawText(holeLabel(i), cHole, base, cellP)
+            canvas.drawText(holeLabel(i, codes), cHole, base, cellP)
             canvas.drawText(dists.getOrNull(i)?.let { comma(it) } ?: "-", cDist, base, cellP)
             canvas.drawText(pars.getOrNull(i)?.toString() ?: "-", cPar, base, cellP)
             rec.players.forEachIndexed { j, p ->
@@ -167,7 +169,7 @@ object RecordImage {
                 val sBot = rowY + subH
                 val sBase = sBot - 14f
                 canvas.drawRect(0f, rowY, W.toFloat(), sBot, solid(SUB_BG))
-                canvas.drawText("${('A'.code + course).toChar()}코스", cHole, sBase, subP)
+                canvas.drawText("${codes.getOrNull(course) ?: ('A'.code + course).toChar()}코스", cHole, sBase, subP)
                 canvas.drawText(comma((start..i).sumOf { dists.getOrNull(it) ?: 0 }), cDist, sBase, subP)
                 canvas.drawText((start..i).sumOf { pars.getOrNull(it) ?: 0 }.toString(), cPar, sBase, subP)
                 rec.players.forEachIndexed { j, p ->
@@ -351,10 +353,10 @@ object RecordImage {
     /** 천단위 콤마 포맷 (예: 3070 -> "3,070") */
     private fun comma(n: Int): String = "%,d".format(n)
 
-    private fun holeLabel(i: Int): String {
+    private fun holeLabel(i: Int, codes: List<String>): String {
         val course = i / 9
         val no = i % 9 + 1
-        return "${('A'.code + course).toChar()}-$no"
+        return "${codes.getOrNull(course) ?: ('A'.code + course).toChar()}-$no"
     }
 
     private fun scoreDisplay(v: Int?, scoreType: String): String {

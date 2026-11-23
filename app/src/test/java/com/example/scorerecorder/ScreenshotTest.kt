@@ -313,7 +313,7 @@ class ScreenshotTest {
         seedBase(storage)
         snap("record_list") {
             ScoreRecorderTheme {
-                RecordListScreen(storage, {}, {}, {})
+                RecordListScreen(storage, {}, {}, {}, {})
             }
         }
     }
@@ -332,7 +332,7 @@ class ScreenshotTest {
         )
         snap("record_list_period_recent3") {
             ScoreRecorderTheme {
-                RecordListScreen(storage, {}, {}, {})
+                RecordListScreen(storage, {}, {}, {}, {})
             }
         }
     }
@@ -351,7 +351,7 @@ class ScreenshotTest {
         )
         snap("record_list_period_fixed") {
             ScoreRecorderTheme {
-                RecordListScreen(storage, {}, {}, {})
+                RecordListScreen(storage, {}, {}, {}, {})
             }
         }
     }

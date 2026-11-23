@@ -62,6 +62,30 @@ private val EN_DIGITS = mapOf(
     "six" to 6, "seven" to 7, "eight" to 8, "nine" to 9
 )
 
+/** 골프 용어의 기준타 대비 값 (긴 별칭부터 매칭) */
+private val RELATIVE_TERMS = linkedMapOf(
+    "트리플보기" to 3, "트리플보" to 3, "트리플" to 3, "쓰리오버" to 3,
+    "더블보기" to 2, "더블" to 2, "투오버" to 2, "보리" to 1,
+    "보기" to 1, "원오버" to 1, "오버" to 1,
+    "버디" to -1, "버디리" to -1, "원언더" to -1, "언더" to -1,
+    "이글" to -2, "투언더" to -2, "알바트로스" to -3, "알바" to -3,
+    "파" to 0, "기준타" to 0, "기준" to 0, "제로" to 0
+)
+
+/** 홀인원처럼 절대 타수가 정해진 용어 */
+private val ABSOLUTE_TERMS = linkedMapOf(
+    "홀인원" to 1, "에이스" to 1, "원홀" to 1
+)
+
+/** 음성인식이 말투를 붙여 돌려주는 경우가 많아 자주 나오는 조사/종결어만 떼어낸다 */
+private val TRAILING_PARTICLES = listOf(
+    "입니다", "이에요", "예요", "에요", "이야", "하세요", "하고", "해요",
+    "야", "요", "네", "다", "임", "개", "타", "점", "홀", "해"
+)
+
+/** 구어체 숫자 (기존 파서에 없는 표현) */
+private val KO_EXTRA_DIGITS = mapOf("네" to 4, "너" to 4)
+
 enum class AcceptResult { ACCEPTED, OUT_OF_RANGE, UNPARSED }
 
 /**
@@ -121,6 +145,104 @@ fun parseVoiceScore(raw: String): Int? {
         return if (v < 0) v else s * v
     }
     return null
+}
+
+/** 조사/구두점/말투를 떼어내고 비교할 문자열로 정리 */
+private fun cleanUtterance(raw: String): String {
+    var s = raw.lowercase()
+        .replace("\u00a0", " ")
+        .replace(Regex("[^0-9a-z가-힣+\\-\\s]"), " ")
+        .trim()
+    var changed = true
+    while (changed) {
+        changed = false
+        for (p in TRAILING_PARTICLES) {
+            if (s.length > p.length && s.endsWith(p)) {
+                s = s.dropLast(p.length).trim()
+                changed = true
+                break
+            }
+        }
+    }
+    return s
+}
+
+private fun matchesTerm(text: String, term: String): Boolean {
+    if (text == term) return true
+    // 한 글자 용어("파")는 오인식 방지를 위해 정확히 일치할 때만 인정
+    if (term.length < 2 || !text.startsWith(term)) return false
+    val rest = text.drop(term.length)
+    return rest.length <= 2 && rest.all { it in "야요네다임이에예" }
+}
+
+private fun relativeTerm(text: String): Int? {
+    for ((term, mark) in RELATIVE_TERMS) {
+        val v = if (matchesTerm(text, term)) mark else null
+        if (v != null) return v
+    }
+    return null
+}
+
+private fun absoluteTerm(text: String): Int? {
+    for ((term, value) in ABSOLUTE_TERMS) {
+        val v = if (matchesTerm(text, term)) value else null
+        if (v != null) return v
+    }
+    return null
+}
+
+/** "사야", "버디예요", "네" 처럼 인식된 표현까지 점수로 읽는다 */
+private fun parseTolerantNumber(text: String): Int? {
+    for (token in text.split(Regex("\\s+")).filter { it.isNotEmpty() }) {
+        parseVoiceScore(token)?.let { return it }
+        val cleaned = cleanUtterance(token)
+        KO_EXTRA_DIGITS[cleaned]?.let { return it }
+        if (cleaned != token) parseVoiceScore(cleaned)?.let { return it }
+    }
+    return null
+}
+
+private fun resolveVoiceScoreOne(raw: String, scoreType: String, par: Int?): Int? {
+    var s = cleanUtterance(raw)
+        .replace("마이너스", "-").replace("빼", "-").replace("플러스", "+")
+    if (s.isEmpty()) return null
+    val neg = s.startsWith("-")
+    val pos = s.startsWith("+")
+    s = s.trimStart('-', '+').trim()
+    if (s.isEmpty()) return null
+
+    val term = relativeTerm(s)
+    if (term != null) {
+        val mark = if (neg) -term else term
+        return if (scoreType == "R") mark else (par ?: 4) + mark
+    }
+    val abs = absoluteTerm(s)
+    if (abs != null) return if (scoreType == "R") abs - (par ?: 4) else abs
+
+    val n = parseVoiceScore(s) ?: parseTolerantNumber(s) ?: return null
+    return if (neg) -kotlin.math.abs(n) else if (pos) kotlin.math.abs(n) else n
+}
+
+/**
+ * 음성 후보를 현재 입력모드에 맞춰 점수로 바꾼다.
+ * - 절대점수(A): "버디"=기준타-1, "파"=기준타, "보기"=기준타+1 로 환산
+ * - 상대점수(R): "버디"=-1, "파"=0, "보기"=+1 그대로 사용
+ * - "사/버디" 뒤에 조사가 붙거나 한글 숫자로 인식돼도 처리한다.
+ */
+fun resolveVoiceScore(
+    candidates: List<String>,
+    allowed: List<Int>,
+    scoreType: String,
+    par: Int?
+): Pair<AcceptResult, Int> {
+    var first: Int? = null
+    for (c in candidates) {
+        val v = resolveVoiceScoreOne(c, scoreType, par) ?: continue
+        if (first == null) first = v
+        if (v in allowed) return AcceptResult.ACCEPTED to v
+    }
+    return if (first != null) AcceptResult.OUT_OF_RANGE to first!!
+    else AcceptResult.UNPARSED to 0
 }
 
 /** SpeechRecognizer 래퍼 (메인 스레드에서만 사용) */
@@ -326,6 +448,8 @@ private fun MicIcon(tint: Color, modifier: Modifier = Modifier) {
 @Composable
 fun VoiceScoreMic(
     allowed: List<Int>,
+    scoreType: String = "A",
+    par: Int? = null,
     modifier: Modifier = Modifier,
     onScore: (Int) -> Unit
 ) {
@@ -338,10 +462,10 @@ fun VoiceScoreMic(
         )
     }
 
-    val recognizer = remember {
+    val recognizer = remember(scoreType, par) {
         VoiceRecognizer(
             tryAccept = { candidates ->
-                val (result, value) = pickVoiceScore(candidates, allowed)
+                val (result, value) = resolveVoiceScore(candidates, allowed, scoreType, par)
                 when (result) {
                     AcceptResult.ACCEPTED -> {
                         failMsg = null
@@ -389,7 +513,7 @@ fun VoiceScoreMic(
                 failMsg != null -> failMsg!!
                 recognizer.listening ->
                     if (recognizer.heard.isBlank()) "말해 주세요…" else "\"${recognizer.heard}\" 인식 중"
-                else -> "마이크를 누르고 정수를 말하세요 (예: \"4\", \"마이너스 1\", \"버디\")"
+                else -> "마이크를 누르고 타수를 말하세요 (예: \"4\", \"사\", \"버디\", \"파\", \"보기\")"
             },
             fontSize = 11.sp,
             maxLines = 2,

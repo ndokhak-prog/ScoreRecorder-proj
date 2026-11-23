@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
@@ -70,11 +71,27 @@ fun CourseDetailScreen(
         mutableStateListOf(*Array(effHoles) { i -> base.getOrNull(i)?.takeIf { it > 0 } })
     }
 
+    // 9홀별 코스 코드 (A부터 시작, 중복 지정 가능)
+    val courseCodes = remember(editCourse) {
+        mutableStateListOf(*(editCourse?.courses?.map { it.code } ?: emptyList()).toTypedArray())
+    }
+    val numCourses = (effHoles + 8) / 9
+    val displayCodes = CourseCodes.fit(courseCodes, numCourses)
+
     var showRegionDialog by remember { mutableStateOf(false) }
     var showCancelConfirm by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var parPick by remember { mutableStateOf<Int?>(null) }
     var dupConfirm by remember { mutableStateOf(false) }
+    var codePick by remember { mutableStateOf<Int?>(null) }
+
+    fun setCourseCode(block: Int, code: String) {
+        val next = CourseCodes.fit(courseCodes, numCourses).toMutableList()
+        if (block in next.indices) next[block] = code
+        courseCodes.clear()
+        courseCodes.addAll(next)
+        codePick = null
+    }
 
     fun buildAndSave(force: Boolean = false): Boolean {
         val eff = if (holeValue in listOf(9, 18, 27, 36)) holeValue else customHole.toIntOrNull() ?: 0
@@ -89,17 +106,12 @@ fun CourseDetailScreen(
             return false
         }
 
-        val courses = List((eff + 8) / 9) { ci ->
-            val start = ci * 9
-            val idxs = (start until minOf(start + 9, eff)).toList()
-            val dSum = idxs.sumOf { distances[it] ?: 0 }
-            val pSum = idxs.sumOf { pars[it] ?: 0 }
-            HoleCourse(
-                code = "${('A'.code + ci).toChar()}",
-                distances = idxs.map { distances[it] ?: 0 } + dSum,
-                pars = idxs.map { pars[it] ?: 0 } + pSum
-            )
-        }
+        val courses = CourseInfo.buildCourses(
+            codes = CourseCodes.fit(courseCodes, (eff + 8) / 9),
+            holes = eff,
+            distances = distances,
+            pars = pars
+        )
         val newCourse = GolfCourse(
             courseId = editCourse?.courseId ?: IdGen.unique(),
             region = region,
@@ -180,15 +192,27 @@ fun CourseDetailScreen(
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        List((effHoles + 8) / 9) { idx -> ('A'.code + idx).toChar() }.chunked(3).forEach { trio ->
+                        displayCodes.chunked(3).forEachIndexed { rowIdx, trio ->
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                trio.forEach { ch ->
-                                    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer) {
-                                        Text("${ch}코스(${courseColorLabel(ch - 'A')})", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 13.sp, maxLines = 1)
+                                trio.forEachIndexed { i, code ->
+                                    val block = rowIdx * 3 + i
+                                    Surface(
+                                        shape = MaterialTheme.shapes.small,
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.clickableNoRipple { codePick = block }
+                                    ) {
+                                        Text(
+                                            "${code}코스(${courseColorLabel(CourseCodes.colorIndex(code))})",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            fontSize = 13.sp,
+                                            maxLines = 1
+                                        )
                                     }
                                 }
                             }
                         }
+                        Text("코스명을 누르면 변경할 수 있습니다 (중복 가능)",
+                            fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -196,12 +220,12 @@ fun CourseDetailScreen(
             if (effHoles > 0) {
                 AppCard {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        val numC = (effHoles + 8) / 9
-                        (0 until numC).map { idx -> ('A'.code + idx).toChar() }.chunked(2).forEach { pair ->
+                        displayCodes.chunked(2).forEachIndexed { rowIdx, pair ->
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                pair.forEach { ch ->
+                                pair.forEachIndexed { i, code ->
                                     CourseGrid(
-                                        ch = ch,
+                                        block = rowIdx * 2 + i,
+                                        code = code,
                                         effHoles = effHoles,
                                         distances = distances,
                                         pars = pars,
@@ -308,6 +332,16 @@ fun CourseDetailScreen(
             onDismiss = { parPick = null },
             min = 1, max = 5)
     }
+    codePick?.let { block ->
+        if (block in displayCodes.indices) {
+            CourseCodePickerDialog(
+                title = "${block + 1}번째 9홀 코스 선택 (중복 가능)",
+                selected = displayCodes[block],
+                onSelect = { setCourseCode(block, it) },
+                onDismiss = { codePick = null }
+            )
+        }
+    }
     message?.let { InfoMessage(it, onDismiss = { message = null }) }
     if (dupConfirm) {
         ConfirmMessage(
@@ -336,17 +370,18 @@ fun CourseDetailScreen(
 
 @Composable
 private fun CourseGrid(
-    ch: Char,
+    block: Int,
+    code: String,
     effHoles: Int,
     distances: SnapshotStateList<Int?>,
     pars: SnapshotStateList<Int?>,
     onParPick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val courseStart = (ch - 'A') * 9
+    val courseStart = block * 9
     val idxs = (courseStart until minOf(courseStart + 9, effHoles)).toList()
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("${ch}코스(${courseColorLabel(ch - 'A')})", fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, color = MaterialTheme.colorScheme.primary)
+        Text("${code}코스(${courseColorLabel(CourseCodes.colorIndex(code))})", fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth()) {
             CellH("홀", 30.dp)
@@ -448,6 +483,50 @@ fun mapIntentFor(context: Context, address: String): Intent? {
                 .setPackage(google)
         else -> null
     }
+}
+
+/** 코스 코드 선택 다이얼로그 (A~Z, 같은 코드 중복 선택 가능) */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CourseCodePickerDialog(
+    title: String,
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface,
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp) },
+        text = {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(6),
+                modifier = Modifier.fillMaxWidth().height(260.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(CourseCodes.ALL) { code ->
+                    val isSel = code == selected
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.clickableNoRipple { onSelect(code) }
+                    ) {
+                        Text(
+                            code,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            textAlign = TextAlign.Center,
+                            fontSize = 14.sp,
+                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("닫기") } }
+    )
 }
 
 /** 이미 저장된 구장명과 중복인지 여부 (구장명은 정제 후 비교) */

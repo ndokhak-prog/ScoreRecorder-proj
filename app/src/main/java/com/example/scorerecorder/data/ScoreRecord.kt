@@ -24,5 +24,6 @@ data class ScoreRecord(
     val pars: List<Int> = emptyList(),      // 홀별 파(기준타) 합계 포함(마지막)
     val scoreType: String = "A",            // 점수입력방식 A/R
     val players: MutableList<PlayerScore> = mutableListOf(),  // 선수정보
+    val courseCodes: List<String> = emptyList(), // 9홀별 코스 코드 (A,B,… 중복 허용, 구버전 기록은 빈 목록)
     val updateDate: String = ""             // 입력일시 yyyy-MM-dd HH:mm:ss
 )

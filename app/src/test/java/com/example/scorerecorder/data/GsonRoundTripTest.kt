@@ -26,6 +26,7 @@ class GsonRoundTripTest {
             distances = listOf(480, 170, 330, 520, 400, 160, 350, 450, 210, 3070),
             pars = listOf(5, 3, 4, 5, 4, 3, 4, 4, 3, 35),
             scoreType = "R",
+            courseCodes = listOf("B", "B"),
             players = mutableListOf(
                 PlayerScore("홍길동", mutableListOf(5, 3, 4, 5, 4, 3, 4, 4, 3, 35), 35, 1, false),
                 PlayerScore("김철수", mutableListOf(5, 4, 4, 5, 4, 3, 4, 4, 4, 37), 37, 2, false)
@@ -41,6 +42,7 @@ class GsonRoundTripTest {
         assertEquals(2, restored.players.size)
         assertEquals("홍길동", restored.players[0].name)
         assertEquals(35, restored.players[0].total)
+        assertEquals(listOf("B", "B"), restored.courseCodes)
     }
 
     @Test

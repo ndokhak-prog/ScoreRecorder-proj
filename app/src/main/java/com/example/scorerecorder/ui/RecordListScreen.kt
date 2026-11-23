@@ -26,7 +26,8 @@ fun RecordListScreen(
     storage: Storage,
     onBack: () -> Unit,
     onOpen: (String) -> Unit,
-    onNewGame: () -> Unit
+    onNewGame: () -> Unit,
+    onCopy: (String) -> Unit
 ) {
     // 초기화면(MainScreen)과 동일한 규칙으로 설정에서 기간 초기값을 가져온다
     val settings = remember { storage.loadSettings() }
@@ -135,6 +136,14 @@ fun RecordListScreen(
                                         contentPadding = PaddingValues(horizontal = 6.dp)
                                     ) {
                                         Text("공유", fontSize = 9.sp, maxLines = 1)
+                                    }
+                                    Spacer(Modifier.width(4.dp))
+                                    OutlinedButton(
+                                        onClick = { onCopy(rec.gameId) },
+                                        modifier = Modifier.defaultMinSize(minWidth = 0.dp, minHeight = 26.dp),
+                                        contentPadding = PaddingValues(horizontal = 6.dp)
+                                    ) {
+                                        Text("복사", fontSize = 9.sp, maxLines = 1)
                                     }
                                     Spacer(Modifier.width(4.dp))
                                     Column(horizontalAlignment = Alignment.End) {

@@ -148,7 +148,12 @@ fun GolfApp(storage: Storage, onFinished: () -> Unit) {
                     storage = storage,
                     onBack = { pop() },
                     onOpen = { id -> push(ScreenKind.RecordDetail, NavBundle(gameId = id)) },
-                    onNewGame = { push(ScreenKind.NewGame) }
+                    onNewGame = { push(ScreenKind.NewGame) },
+                    onCopy = { id ->
+                        // 타수만 초기화한 새 기록을 만들고 바로 점수입력(기록상세)으로 이동
+                        val newId = storage.copyRecordForNewGame(id)
+                        if (newId != null) push(ScreenKind.RecordDetail, NavBundle(gameId = newId, isNew = true))
+                    }
                 )
             }
 

@@ -102,4 +102,52 @@ class VoiceScoreInputTest {
         val r = pickVoiceScore(listOf("안녕하세요", "어쨌죠"), listOf(1, 2, 3))
         assertEquals(AcceptResult.UNPARSED, r.first)
     }
+
+    // ---- 실제 인식 결과(조사/말투 포함)와 절대점수 환산 ----
+
+    @Test
+    fun resolve_absolute_convertsGolfTermsUsingPar() {
+        val allowed = (1..10).toList()
+        assertEquals(4, resolveVoiceScore(listOf("버디"), allowed, "A", 5).second)
+        assertEquals(5, resolveVoiceScore(listOf("파"), allowed, "A", 5).second)
+        assertEquals(6, resolveVoiceScore(listOf("보기"), allowed, "A", 5).second)
+        assertEquals(3, resolveVoiceScore(listOf("이글"), allowed, "A", 5).second)
+        assertEquals(AcceptResult.ACCEPTED, resolveVoiceScore(listOf("버디"), allowed, "A", 5).first)
+    }
+
+    @Test
+    fun resolve_relative_keepsMarks() {
+        val allowed = (-5..5).toList()
+        assertEquals(-1, resolveVoiceScore(listOf("버디"), allowed, "R", 5).second)
+        assertEquals(0, resolveVoiceScore(listOf("파"), allowed, "R", 5).second)
+        assertEquals(1, resolveVoiceScore(listOf("보기"), allowed, "R", 5).second)
+    }
+
+    @Test
+    fun resolve_acceptsSpokenParticlesAndColloquialDigits() {
+        val allowed = (1..10).toList()
+        assertEquals(4, resolveVoiceScore(listOf("사야"), allowed, "A", 4).second)
+        assertEquals(4, resolveVoiceScore(listOf("버디예요"), allowed, "A", 5).second)
+        assertEquals(4, resolveVoiceScore(listOf("네"), allowed, "A", 4).second)
+        assertEquals(AcceptResult.ACCEPTED, resolveVoiceScore(listOf("사", "버디"), allowed, "A", 5).first)
+    }
+
+    @Test
+    fun resolve_holeInOne_isAbsoluteOne() {
+        val allowed = (1..10).toList()
+        assertEquals(1, resolveVoiceScore(listOf("홀인원"), allowed, "A", 4).second)
+        assertEquals(-3, resolveVoiceScore(listOf("홀인원"), allowed, "R", 4).second)
+    }
+
+    @Test
+    fun resolve_reportsOutOfRangeAndUnparsed() {
+        assertEquals(
+            AcceptResult.OUT_OF_RANGE,
+            resolveVoiceScore(listOf("보기"), listOf(1, 2, 3), "A", 5).first
+        )
+        assertEquals(
+            AcceptResult.UNPARSED,
+            resolveVoiceScore(listOf("안녕하세요"), listOf(1, 2, 3), "A", 5).first
+        )
+    }
 }

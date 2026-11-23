@@ -195,4 +195,65 @@ class StorageIoTest {
             storage.importRecordsJson("[ { ")
         }
     }
+
+    @Test
+    fun records_copyForNewGame_resetsScoresOnly() {
+        scoreFile("2026").delete()
+        val original = ScoreRecord(
+            gameId = "2026COPY",
+            courseName = "copy-course",
+            gameDate = "20261115",
+            region = "Seoul",
+            totalHoles = 9,
+            distances = List(9) { 100 + it },
+            pars = List(9) { 4 },
+            scoreType = "A",
+            courseCodes = listOf("B"),
+            players = mutableListOf(
+                PlayerScore("P1", mutableListOf(3, 4, 4, 5, 3, 4, 4, 4, 4, 35), 35, 1, true)
+            ),
+            updateDate = "2026-11-15 10:00:00"
+        )
+        storage.saveRecords("2026", listOf(original))
+
+        val newId = storage.copyRecordForNewGame("2026COPY")!!
+        val copied = storage.loadRecordById(newId)!!.second
+
+        assertTrue("new gameId", newId != original.gameId)
+        assertEquals("copy-course", copied.courseName)
+        assertEquals("20261115", copied.gameDate)
+        assertEquals(9, copied.totalHoles)
+        assertEquals(original.distances, copied.distances)
+        assertEquals(original.pars, copied.pars)
+        assertEquals(listOf("B"), copied.courseCodes)
+        assertEquals("A", copied.scoreType)
+        assertEquals(1, copied.players.size)
+        assertEquals("P1", copied.players[0].name)
+        assertTrue("scores reset", copied.players[0].scores.dropLast(1).all { it == null })
+        assertEquals(0, copied.players[0].total)
+        assertEquals(0, copied.players[0].rank)
+        assertTrue(!copied.players[0].excluded)
+        assertTrue(copied.updateDate.isNotBlank())
+        assertEquals(2, storage.loadRecords("2026").size)
+
+        scoreFile("2026").delete()
+    }
+
+    @Test
+    fun records_loadInPeriod_sortsByGameDateThenInputTimeDesc() {
+        scoreFile("2026").delete()
+        storage.saveRecords(
+            "2026",
+            listOf(
+                ScoreRecord(gameId = "2026S1", gameDate = "20261115", updateDate = "2026-11-15 09:00:00"),
+                ScoreRecord(gameId = "2026S2", gameDate = "20261115", updateDate = "2026-11-15 10:30:00"),
+                ScoreRecord(gameId = "2026S3", gameDate = "20261114", updateDate = "2026-11-15 23:00:00")
+            )
+        )
+
+        val ids = storage.loadRecordsInPeriod("202611", "202611").map { it.gameId }
+        assertEquals(listOf("2026S2", "2026S1", "2026S3"), ids)
+
+        scoreFile("2026").delete()
+    }
 }

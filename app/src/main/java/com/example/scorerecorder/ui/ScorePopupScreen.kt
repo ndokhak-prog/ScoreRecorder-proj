@@ -59,7 +59,7 @@ fun ScorePopupScreen(
         title = { Text(text = if (scoreType == "R") "상대점수 (기준타 대비)" else "절대점수 선택", fontSize = 16.sp) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-                VoiceScoreMic(allowed = values) { v -> selected = v }
+                VoiceScoreMic(allowed = values, scoreType = scoreType, par = par) { v -> selected = v }
                 values.chunked(5).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                         row.forEach { v ->

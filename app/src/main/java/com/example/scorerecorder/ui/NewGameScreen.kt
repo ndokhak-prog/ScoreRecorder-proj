@@ -56,6 +56,58 @@ fun NewGameScreen(
         )
     }
 
+    // 저장된 구장정보 (코스별 거리/파 불러오기용)
+    val savedPlace = remember(selectedPlace, courseId, courseName) {
+        selectedPlace ?: storage.findPlaceById(courseId) ?: storage.findPlaceByName(courseName)
+    }
+    val effHoles = if (holeValue in listOf(9, 18, 27, 36)) holeValue else customHole.toIntOrNull() ?: 0
+    val numCourses = (effHoles + 8) / 9
+
+    // 9홀별 코스 코드 (중복 허용) + 해당 코스의 홀 정보
+    val courseCodes = remember(selectedPlace, courseId) {
+        mutableStateListOf(*(selectedPlace?.courses?.map { it.code } ?: emptyList()).toTypedArray())
+    }
+    val displayCodes = CourseCodes.fit(courseCodes, numCourses)
+    val distances = remember(savedPlace, courseId) {
+        val flat = CourseInfo.flatten(savedPlace, CourseCodes.fit(courseCodes, numCourses)).first
+        mutableStateListOf(*Array(effHoles) { flat.getOrNull(it) })
+    }
+    val pars = remember(savedPlace, courseId) {
+        val flat = CourseInfo.flatten(savedPlace, CourseCodes.fit(courseCodes, numCourses)).second
+        mutableStateListOf(*Array(effHoles) { flat.getOrNull(it) })
+    }
+
+    var codePick by remember { mutableStateOf<Int?>(null) }
+
+    /** 홀 수 변경 시 코스 코드와 홀 정보를 다시 맞춘다 */
+    fun syncHoles(holes: Int) {
+        val codes = CourseCodes.fit(courseCodes, (holes + 8) / 9)
+        val flat = CourseInfo.flatten(savedPlace, codes)
+        distances.clear(); pars.clear()
+        repeat(holes) { i ->
+            distances.add(flat.first.getOrNull(i))
+            pars.add(flat.second.getOrNull(i))
+        }
+    }
+
+    /** 코스 변경: 저장된 구장정보에서 해당 코스 홀 정보를 읽어 해당 블록에 반영 */
+    fun setCourseCode(block: Int, code: String) {
+        val next = CourseCodes.fit(courseCodes, numCourses).toMutableList()
+        if (block !in next.indices) return
+        next[block] = code
+        courseCodes.clear(); courseCodes.addAll(next)
+        if (savedPlace?.courses?.any { it.code == code } == true) {
+            val occurrence = next.take(block).count { it == code }
+            val (d, p) = CourseInfo.holesOf(savedPlace, code, occurrence)
+            repeat(9) { i ->
+                val hi = block * 9 + i
+                if (hi < distances.size) distances[hi] = d.getOrNull(i)
+                if (hi < pars.size) pars[hi] = p.getOrNull(i)
+            }
+        }
+        codePick = null
+    }
+
     var showRegionDialog by remember { mutableStateOf(false) }
     var showDatePick by remember { mutableStateOf(false) }
     var showNickDialog by remember { mutableStateOf<Int?>(null) }
@@ -68,8 +120,6 @@ fun NewGameScreen(
             .filter { it.isNotEmpty() }
         all.filter { it == settings.nickname } + all.filter { it != settings.nickname }.sorted()
     }
-
-    val numCourses = (if (holeValue in listOf(9, 18, 27, 36)) holeValue else customHole.toIntOrNull() ?: 0 + 8) / 9
 
     fun backOrConfirm() {
         val dirty = courseId.isNotEmpty() || courseName.isNotEmpty() || holeValue != settings.newHole ||
@@ -91,10 +141,11 @@ fun NewGameScreen(
             gameDate = gameDate,
             region = region,
             totalHoles = hole,
-            distances = selectedPlace?.courses?.flatMap { it.distances.dropLast(1) }.orEmpty(),
-            pars = selectedPlace?.courses?.flatMap { it.pars.dropLast(1) }.orEmpty(),
+            distances = (0 until hole).map { distances.getOrNull(it)?.takeIf { d -> d > 0 } ?: 0 },
+            pars = (0 until hole).map { pars.getOrNull(it)?.takeIf { p -> p > 0 } ?: 0 },
             scoreType = scoreType,
             players = names.map { PlayerScore(name = it) }.toMutableList(),
+            courseCodes = CourseCodes.fit(courseCodes, (hole + 8) / 9),
             updateDate = DateTimeUtils.now()
         )
         val year = DateTimeUtils.yearOf(gameDate)
@@ -172,29 +223,39 @@ fun NewGameScreen(
                         Text("홀", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Row {
                             listOf(9, 18, 27).forEach { h ->
-                                RadioH(selected = holeValue == h, label = "${h}홀") { holeValue = h; customHole = "" }
+                                RadioH(selected = holeValue == h, label = "${h}홀") {
+                                    holeValue = h; customHole = ""; syncHoles(h)
+                                }
                                 Spacer(modifier = Modifier.width(6.dp))
                             }
                         }
                         Row {
-                            RadioH(selected = holeValue == 36, label = "36홀") { holeValue = 36; customHole = "" }
+                            RadioH(selected = holeValue == 36, label = "36홀") {
+                                holeValue = 36; customHole = ""; syncHoles(36)
+                            }
                             Spacer(modifier = Modifier.width(6.dp))
                             OtherHoleField(
                                 selected = holeValue !in listOf(9, 18, 27, 36),
                                 value = customHole,
-                                onValueChange = { customHole = it },
+                                onValueChange = {
+                                    customHole = it
+                                    syncHoles(it.toIntOrNull() ?: 0)
+                                },
                                 onSelect = { holeValue = -1 }
                             )
                         }
-                        ('A' until ('A' + numCourses)).toList().chunked(3).forEach { rowChips ->
+                        Text("코스정보 (눌러서 변경, 중복 가능)", fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        displayCodes.chunked(3).forEachIndexed { rowIdx, rowCodes ->
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                rowChips.forEach { ch ->
+                                rowCodes.forEachIndexed { i, code ->
                                     Surface(
                                         shape = MaterialTheme.shapes.small,
-                                        color = MaterialTheme.colorScheme.primaryContainer
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.clickableNoRipple { codePick = rowIdx * 3 + i }
                                     ) {
                                         Text(
-                                            "${ch}코스(${courseColorLabel(ch - 'A')})",
+                                            "${code}코스(${courseColorLabel(CourseCodes.colorIndex(code))})",
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                             fontSize = 13.sp, maxLines = 1
                                         )
@@ -291,6 +352,16 @@ fun NewGameScreen(
     }
     if (showDatePick) {
         DatePickDialog(gameDate, onPick = { gameDate = it }, onDismiss = { showDatePick = false })
+    }
+    codePick?.let { block ->
+        if (block in displayCodes.indices) {
+            CourseCodePickerDialog(
+                title = "${block + 1}번째 9홀 코스 선택 (중복 가능)",
+                selected = displayCodes[block],
+                onSelect = { setCourseCode(block, it) },
+                onDismiss = { codePick = null }
+            )
+        }
     }
     showNickDialog?.let { idx ->
         ComboDialog("닉네임", nickNames, "",

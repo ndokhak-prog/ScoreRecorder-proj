@@ -54,7 +54,6 @@ fun RecordDetailScreen(
 
     val holes = record.totalHoles
     val numCourses = (holes + 8) / 9
-    val courseLetters = remember(holes) { List(numCourses) { ('A'.code + it).toChar() } }
 
     // 구장정보 (거리/파 자동표시용)
     val place = remember(record.courseName) { storage.findPlaceByName(record.courseName) }
@@ -82,8 +81,11 @@ fun RecordDetailScreen(
             )
         }.toMutableStateList()
     }
+    // 9홀별 코스 코드 (중복 허용). 과거 기록은 A부터 순서대로 보정한다.
+    val courseCodes = remember(record) {
+        mutableStateListOf(*CourseCodes.forRecord(record).toTypedArray())
+    }
     val courseChecked = remember(record) { mutableStateListOf(*Array(numCourses) { true }) }
-    val courseOrder = remember(record) { courseLetters.toMutableStateList() }
     val scoreType = record.scoreType
 
     val baseParAll = pars.sumOf { it ?: 0 }
@@ -101,14 +103,33 @@ fun RecordDetailScreen(
     var gameDate by remember { mutableStateOf(record.gameDate) }
     var nameEditIdx by remember { mutableStateOf<Int?>(null) }
     var showDatePick by remember { mutableStateOf(false) }
+    var showApplyConfirm by remember { mutableStateOf(false) }
 
     // 점수 입력 즉시 저장 (기록상세 화면은 그대로 유지)
     fun saveNow() {
         saveRecord(
             storage, record, distances, pars, players, scoreType,
-            courseChecked, courseOrder, courseLetters, holes, gameDate
+            courseChecked, courseCodes, holes, gameDate
         )
         onRefresh()
+    }
+
+    /** 기록의 코스별 거리·기준타를 저장된 구장정보에 현행화 */
+    fun applyCourseToPlace() {
+        val target = place
+        if (target == null) {
+            message = "저장된 구장정보가 없어 반영할 수 없습니다."
+            return
+        }
+        val updated = CourseInfo.applyToPlace(
+            target, CourseCodes.fit(courseCodes, numCourses), holes, distances, pars
+        )
+        val list = storage.loadPlaces().toMutableList()
+        val idx = list.indexOfFirst { it.courseId == target.courseId }
+        if (idx >= 0) list[idx] = updated else list.add(updated)
+        storage.savePlaces(list)
+        onRefresh()
+        message = "구장정보에 코스 홀정보를 반영했습니다."
     }
 
     // 코스 드래그로 순서 변경 (1행 4개, 다른 행까지 이동가능)
@@ -200,14 +221,13 @@ fun RecordDetailScreen(
 
             // 코스 표시/숨김 + 드래그 순서 변경 (1행 3개, 다른 행 이동 가능)
             Text("코스 : ", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            courseOrder.chunked(3).forEach { rowLetters ->
+            courseCodes.chunked(3).forEachIndexed { rowIdx, rowCodes ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    rowLetters.forEach { letter ->
-                        val ord = courseOrder.indexOf(letter)
-                        val ci = courseLetters.indexOf(letter)
+                    rowCodes.forEachIndexed { i, code ->
+                        val ord = rowIdx * 3 + i
                         Surface(
                             shape = MaterialTheme.shapes.small,
-                            color = if (courseChecked[ci]) MaterialTheme.colorScheme.primaryContainer
+                            color = if (courseChecked[ord]) MaterialTheme.colorScheme.primaryContainer
                                     else MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier
                                 .onGloballyPositioned { c ->
@@ -225,7 +245,7 @@ fun RecordDetailScreen(
                                     translationX = if (dragIdx == ord) dragX else 0f
                                     translationY = if (dragIdx == ord) -6f else 0f
                                 }
-                                .pointerInput(letter, ord) {
+                                .pointerInput(code, ord) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = { dragIdx = ord; dropIdx = ord },
                                         onDrag = { change, amount ->
@@ -234,7 +254,7 @@ fun RecordDetailScreen(
                                             if (chipLeft.size > ord) {
                                                 val ptrX = chipLeft[ord] + change.position.x
                                                 val ptrY = chipTop[ord] + change.position.y
-                                                dropIdx = courseOrder.indices.minByOrNull { j ->
+                                                dropIdx = courseCodes.indices.minByOrNull { j ->
                                                     val dx = ptrX - chipMid[j]
                                                     val dy = ptrY - chipMidY[j]
                                                     dx * dx + dy * dy
@@ -244,9 +264,9 @@ fun RecordDetailScreen(
                                         onDragEnd = {
                                             val from = dragIdx
                                             if (from >= 0 && from != dropIdx) {
-                                                val item = courseOrder[from]
-                                                courseOrder.removeAt(from)
-                                                courseOrder.add(dropIdx, item)
+                                                val item = courseCodes[from]
+                                                courseCodes.removeAt(from)
+                                                courseCodes.add(dropIdx, item)
                                                 setDirty()
                                             }
                                             dragIdx = -1; dragX = 0f; dropIdx = -1
@@ -255,17 +275,17 @@ fun RecordDetailScreen(
                                     )
                                 }
                                 .clickableNoRipple {
-                                    courseChecked[ci] = !courseChecked[ci]
+                                    courseChecked[ord] = !courseChecked[ord]
                                     setDirty()
                                 }
                                 .padding(end = 4.dp)
                         ) {
                             Text(
-                                "${letter}코스(${courseColorLabel(ci)})",
+                                "${code}코스(${courseColorLabel(CourseCodes.colorIndex(code))})",
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 fontSize = 13.sp,
                                 maxLines = 1,
-                                color = if (courseChecked[ci]) MaterialTheme.colorScheme.onPrimaryContainer
+                                color = if (courseChecked[ord]) MaterialTheme.colorScheme.onPrimaryContainer
                                         else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -307,13 +327,12 @@ fun RecordDetailScreen(
                     }
                     Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
-                    courseOrder.forEach { letter ->
-                        val ci = courseLetters.indexOf(letter)
-                        if (!courseChecked[ci]) return@forEach
+                    courseCodes.forEachIndexed { ci, code ->
+                        if (!courseChecked[ci]) return@forEachIndexed
                         val idxs = courseHoleIndices(ci)
                         idxs.forEach { hi ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                GridCell("${letter}-${hi % 9 + 1}", colWidths[0])
+                                GridCell("${code}-${hi % 9 + 1}", colWidths[0])
                                 NumberGridCell(distances[hi], colWidths[1], onPick = { distPick = hi })
                                 NumberGridCell(pars[hi], colWidths[2], onPick = { parPick = hi })
                                 players.forEachIndexed { pi, p ->
@@ -329,7 +348,7 @@ fun RecordDetailScreen(
                         }
                         // 코스계
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            GridHeader("${letter}코스계", colWidths[0], color = MaterialTheme.colorScheme.tertiary)
+                            GridHeader("${code}코스계", colWidths[0], color = MaterialTheme.colorScheme.tertiary)
                             val ds = idxs.sumOf { distances[it] ?: 0 }
                             GridCell(withComma(ds), colWidths[1], bold = true)
                             val ps = idxs.sumOf { pars[it] ?: 0 }
@@ -372,34 +391,43 @@ fun RecordDetailScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = {
-                        saveRecord(storage, record, distances, pars, players, scoreType, courseChecked, courseOrder, courseLetters, holes, gameDate)
-                        onRefresh()
-                        message = "저장되었습니다."
-                    },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) { Text("저장", maxLines = 1, fontSize = 12.sp) }
-                OutlinedButton(
-                    onClick = { onEvaluate(place?.courseId ?: "", record.courseName, gameDate) },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) { Text("구장평가", maxLines = 1, fontSize = 12.sp) }
-                OutlinedButton(
-                    onClick = { if (dirty) confirmSave = true else onBack() },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    Text("취소", maxLines = 1, fontSize = 12.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            saveRecord(storage, record, distances, pars, players, scoreType, courseChecked, courseCodes, holes, gameDate)
+                            onRefresh()
+                            message = "저장되었습니다."
+                        },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) { Text("저장", maxLines = 1, fontSize = 12.sp) }
+                    OutlinedButton(
+                        onClick = { showApplyConfirm = true },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        contentPadding = PaddingValues(horizontal = 2.dp)
+                    ) { Text("구장반영", maxLines = 1, fontSize = 11.sp) }
+                    OutlinedButton(
+                        onClick = { onEvaluate(place?.courseId ?: "", record.courseName, gameDate) },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        contentPadding = PaddingValues(horizontal = 2.dp)
+                    ) { Text("구장평가", maxLines = 1, fontSize = 11.sp) }
                 }
-                OutlinedButton(
-                    onClick = { onGoRecordList() },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    Text("닫기", maxLines = 1, fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { if (dirty) confirmSave = true else onBack() },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text("취소", maxLines = 1, fontSize = 12.sp)
+                    }
+                    OutlinedButton(
+                        onClick = { onGoRecordList() },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text("닫기", maxLines = 1, fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -448,6 +476,15 @@ fun RecordDetailScreen(
             min = 1, max = 5)
     }
 
+    if (showApplyConfirm) {
+        ConfirmMessage(
+            "이 기록의 코스별 거리·기준타를 구장정보에 반영하시겠습니까?\n" +
+                "같은 코드가 중복되면 마지막 9홀 값으로 갱신됩니다.",
+            onYes = { showApplyConfirm = false; applyCourseToPlace() },
+            onNo = { showApplyConfirm = false }
+        )
+    }
+
     // 저장 알림은 화면을 닫지 않는다 (이전화면/닫기 전까지 기록상세 유지)
     message?.let { InfoMessage(it, onDismiss = { message = null }) }
 
@@ -456,7 +493,7 @@ fun RecordDetailScreen(
             "저장하고 이전화면으로 이동하시겠습니까?\n(아니오를 선택하면 저장하지 않고 이동합니다.)",
             onYes = {
                 showBackConfirm = false
-                saveRecord(storage, record, distances, pars, players, scoreType, courseChecked, courseOrder, courseLetters, holes, gameDate)
+                saveRecord(storage, record, distances, pars, players, scoreType, courseChecked, courseCodes, holes, gameDate)
                 onRefresh()
                 onBack()
             },
@@ -471,7 +508,7 @@ fun RecordDetailScreen(
             "저장하고 이전화면으로 이동하시겠습니까?\n(아니오를 선택하면 저장하지 않고 이동합니다.)",
             onYes = {
                 confirmSave = null
-                saveRecord(storage, record, distances, pars, players, scoreType, courseChecked, courseOrder, courseLetters, holes, gameDate)
+                saveRecord(storage, record, distances, pars, players, scoreType, courseChecked, courseCodes, holes, gameDate)
                 onRefresh()
                 onBack()
             },
@@ -504,7 +541,8 @@ internal fun buildUpdatedRecord(
     players: List<PlayerEdit>,
     scoreType: String,
     holes: Int,
-    gameDate: String
+    gameDate: String,
+    courseCodes: List<String> = emptyList()
 ): ScoreRecord {
     val dSum = distances.sumOf { it ?: 0 }
     val pSum = pars.sumOf { it ?: 0 }
@@ -533,6 +571,7 @@ internal fun buildUpdatedRecord(
         distances = distStored,
         pars = parStored,
         players = playerStored.toMutableList(),
+        courseCodes = courseCodes.ifEmpty { record.courseCodes },
         updateDate = DateTimeUtils.now()
     )
 }
@@ -546,29 +585,16 @@ private fun saveRecord(
     players: List<PlayerEdit>,
     scoreType: String,
     courseChecked: List<Boolean>,
-    courseOrder: List<Char>,
-    courseLetters: List<Char>,
+    courseCodes: List<String>,
     holes: Int,
     gameDate: String
 ) {
-    val pSum = pars.sumOf { it ?: 0 }
-    val updated = buildUpdatedRecord(record, distances, pars, players, scoreType, holes, gameDate)
+    val updated = buildUpdatedRecord(record, distances, pars, players, scoreType, holes, gameDate, courseCodes)
 
     // 구장 신규등록 (구장명 기준 조회)
     if (storage.findPlaceByName(updated.courseName) == null) {
-        val numCourses = (holes + 8) / 9
-        val courses = courseLetters.take(numCourses).map { ch ->
-            val ci = courseLetters.indexOf(ch)
-            val start = ci * 9
-            val idxs = (start until minOf(start + 9, holes)).toList()
-            val ds = idxs.map { distances[it] ?: 0 }
-            val ps = idxs.map { pars[it] ?: 0 }
-            HoleCourse(
-                code = "$ch",
-                distances = ds + ds.sum(),
-                pars = ps + ps.sum()
-            )
-        }
+        val codes = CourseCodes.fit(courseCodes, (holes + 8) / 9)
+        val courses = CourseInfo.buildCourses(codes, holes, distances, pars)
         val place = GolfCourse(
             courseId = IdGen.unique(),
             region = updated.region,

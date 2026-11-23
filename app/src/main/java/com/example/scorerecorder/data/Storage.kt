@@ -148,7 +148,32 @@ class Storage(private val context: Context) {
                 val ym = rec.gameDate.take(6)
                 ym >= fr && ym <= to
             }
-            .sortedByDescending { it.gameDate }
+            // 경기일(yyyymmdd) → 입력일시(yyyy-MM-dd HH:mm:ss, 시분초 포함) 순으로 내림차순.
+            // updateDate 는 고정 폭 문자열이라 사전순 비교가 시간순과 같다.
+            .sortedWith(compareByDescending<ScoreRecord> { it.gameDate }
+                .thenByDescending { it.updateDate })
+    }
+
+    /**
+     * 기존 기록을 새 경기로 복사 (타수만 초기화).
+     * 구장·경기일·홀정보·코스구성·선수명 등은 그대로 유지하고 새 gameId/입력일시를 부여한다.
+     * @return 생성된 새 기록의 gameId (원본이 없으면 null)
+     */
+    fun copyRecordForNewGame(gameId: String): String? {
+        val src = loadRecordById(gameId)?.second ?: return null
+        val year = DateTimeUtils.yearOf(src.gameDate)
+        val blankScores = MutableList<Int?>(src.totalHoles) { null }.apply { add(0) } // 마지막 = 합계
+        val copied = src.copy(
+            gameId = IdGen.gameId(year),
+            players = src.players.map { p ->
+                p.copy(scores = blankScores.toMutableList(), total = 0, rank = 0, excluded = false)
+            }.toMutableList(),
+            updateDate = DateTimeUtils.now()
+        )
+        val list = loadRecords(year).toMutableList()
+        list.add(copied)
+        saveRecords(year, list)
+        return copied.gameId
     }
 
     /** 해당 기간 경기일(경기기록json)에 등록된 선수명 중복제거 */
