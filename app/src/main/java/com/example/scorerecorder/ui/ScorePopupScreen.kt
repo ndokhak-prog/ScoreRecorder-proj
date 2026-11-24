@@ -27,6 +27,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** 점수입력창 상단 정보: 홀 / 기준타 / 점수방식 / 선수명 */
+internal fun scorePopupInfo(holeLabel: String?, par: Int?, scoreType: String, playerName: String?): String {
+    val parts = mutableListOf<String>()
+    if (!holeLabel.isNullOrBlank()) parts.add("홀 $holeLabel")
+    parts.add("기준타 ${par ?: "-"}")
+    parts.add(if (scoreType == "R") "상대점수(R)" else "절대점수(A)")
+    if (!playerName.isNullOrBlank()) parts.add("선수 $playerName")
+    return parts.joinToString("  |  ")
+}
+
 @Composable
 fun ScorePopupScreen(
     scoreType: String,
@@ -35,7 +45,9 @@ fun ScorePopupScreen(
     onDismiss: () -> Unit,
     onSelect: (Int?) -> Unit,
     onResetHole: () -> Unit = {},
-    onCopyToAll: (Int?) -> Unit = {}
+    onCopyToAll: (Int?) -> Unit = {},
+    holeLabel: String? = null,
+    playerName: String? = null
 ) {
     var selected by remember { mutableStateOf(initial) }
     val blink = rememberInfiniteTransition(label = "blink")
@@ -59,6 +71,20 @@ fun ScorePopupScreen(
         title = { Text(text = if (scoreType == "R") "상대점수 (기준타 대비)" else "절대점수 선택", fontSize = 16.sp) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        scorePopupInfo(holeLabel, par, scoreType, playerName),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
                 VoiceScoreMic(allowed = values, scoreType = scoreType, par = par) { v -> selected = v }
                 values.chunked(5).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {

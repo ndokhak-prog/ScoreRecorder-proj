@@ -287,6 +287,31 @@ class ScreenshotTest {
         }
     }
 
+    /** 4명 + 5글자 선수명이 잘리지 않는지 확인 */
+    private fun buildFourPlayerRecord(): ScoreRecord {
+        val base = buildRecord()
+        val pars = base.pars.dropLast(1)
+        val names = listOf("홍길동철수", "김철수민수", "도민호길동", "이영희철수")
+        val players = names.mapIndexed { i, n ->
+            val total = pars.sum() + i
+            PlayerScore(n, (pars.map { it + i } + total).toMutableList<Int?>(), total, i + 1, false)
+        }.toMutableList()
+        return base.copy(players = players, courseCodes = listOf("A", "B"))
+    }
+
+    @Test
+    fun record_detail_four_players() {
+        val storage = newStorage()
+        seedBase(storage)
+        val r = buildFourPlayerRecord()
+        storage.saveRecords(r.gameDate.take(4), listOf(r))
+        snap("record_detail_four_players") {
+            ScoreRecorderTheme {
+                RecordDetailScreen(storage, r.gameId, {}, {}, {}, { _, _, _ -> })
+            }
+        }
+    }
+
     // 하단 버튼(저장/구장평가/취소)까지 담는 검증용 (버튼명 잘림 확인)
     @Test
     @Config(qualifiers = "w411dp-h1600dp-420dpi")

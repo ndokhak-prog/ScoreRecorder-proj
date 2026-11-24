@@ -104,6 +104,7 @@ fun RecordDetailScreen(
     var nameEditIdx by remember { mutableStateOf<Int?>(null) }
     var showDatePick by remember { mutableStateOf(false) }
     var showApplyConfirm by remember { mutableStateOf(false) }
+    var codePick by remember { mutableStateOf<Int?>(null) }
 
     // 점수 입력 즉시 저장 (기록상세 화면은 그대로 유지)
     fun saveNow() {
@@ -132,6 +133,25 @@ fun RecordDetailScreen(
         message = "구장정보에 코스 홀정보를 반영했습니다."
     }
 
+    /** 구장상세와 동일한 코스 변경: 코드가 바뀌면 저장된 구장정보에서 해당 코스 홀 정보를 다시 읽는다 */
+    fun setCourseCode(block: Int, code: String) {
+        val next = CourseCodes.fit(courseCodes, numCourses).toMutableList()
+        if (block !in next.indices) return
+        next[block] = code
+        courseCodes.clear(); courseCodes.addAll(next)
+        if (place?.courses?.any { it.code == code } == true) {
+            val occurrence = next.take(block).count { it == code }
+            val (d, p) = CourseInfo.holesOf(place, code, occurrence)
+            repeat(9) { i ->
+                val hi = block * 9 + i
+                if (hi < distances.size) distances[hi] = d.getOrNull(i)
+                if (hi < pars.size) pars[hi] = p.getOrNull(i)
+            }
+        }
+        codePick = null
+        setDirty()
+    }
+
     // 코스 드래그로 순서 변경 (1행 4개, 다른 행까지 이동가능)
     var dragIdx by remember { mutableStateOf(-1) }
     var dragX by remember { mutableStateOf(0f) }
@@ -151,6 +171,9 @@ fun RecordDetailScreen(
         val filled = p.scores.filterNotNull().sum()
         return if (scoreType == "R") baseParAll + filled else filled
     }
+
+    /** 4명 참여 + 5글자 선수명이 잘리지 않도록 글자크기 축소 */
+    fun playerNameFont(name: String) = if (players.size >= 4 && name.length >= 5) 10.sp else 12.sp
 
     Scaffold(
         containerColor = ScaffoldCanvasColor,
@@ -190,7 +213,7 @@ fun RecordDetailScreen(
                                 Text("선수 : ", fontSize = 12.sp)
                                 players.withIndex().take(2).forEach { (i, p) ->
                                     TextButton(onClick = { nameEditIdx = i }, modifier = Modifier.height(34.dp)) {
-                                        Text(CleanRules.displayPlayer(p.name), fontSize = 12.sp, maxLines = 1)
+                                        Text(CleanRules.displayPlayer(p.name), fontSize = playerNameFont(p.name), maxLines = 1)
                                     }
                                 }
                             }
@@ -198,7 +221,7 @@ fun RecordDetailScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 44.dp)) {
                                     chunk.forEach { (i, p) ->
                                         TextButton(onClick = { nameEditIdx = i }, modifier = Modifier.height(34.dp)) {
-                                            Text(CleanRules.displayPlayer(p.name), fontSize = 12.sp, maxLines = 1)
+                                            Text(CleanRules.displayPlayer(p.name), fontSize = playerNameFont(p.name), maxLines = 1)
                                         }
                                     }
                                 }
@@ -209,7 +232,7 @@ fun RecordDetailScreen(
                             Text("선수 : ", fontSize = 12.sp)
                             players.forEachIndexed { i, p ->
                                 TextButton(onClick = { nameEditIdx = i }, modifier = Modifier.height(34.dp)) {
-                                    Text(CleanRules.displayPlayer(p.name), fontSize = 12.sp, maxLines = 1)
+                                    Text(CleanRules.displayPlayer(p.name), fontSize = playerNameFont(p.name), maxLines = 1)
                                 }
                             }
                         }
@@ -219,81 +242,85 @@ fun RecordDetailScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            // 코스 표시/숨김 + 드래그 순서 변경 (1행 3개, 다른 행 이동 가능)
+            // 코스 표시·숨김 + 코스변경 + 드래그 순서 변경 (1행 3개, 다른 행 이동 가능)
             Text("코스 : ", fontSize = 13.sp, fontWeight = FontWeight.Bold)
             courseCodes.chunked(3).forEachIndexed { rowIdx, rowCodes ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     rowCodes.forEachIndexed { i, code ->
                         val ord = rowIdx * 3 + i
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = if (courseChecked[ord]) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .onGloballyPositioned { c ->
-                                    val l = c.positionInRoot().x
-                                    val t = c.positionInRoot().y
-                                    val w = c.size.width.toFloat()
-                                    val h = c.size.height.toFloat()
-                                    if (chipLeft.size <= ord) {
-                                        chipLeft.add(l); chipTop.add(t); chipMid.add(l + w / 2); chipMidY.add(t + h / 2)
-                                    } else {
-                                        chipLeft[ord] = l; chipTop[ord] = t; chipMid[ord] = l + w / 2; chipMidY[ord] = t + h / 2
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = if (courseChecked[ord]) MaterialTheme.colorScheme.primaryContainer
+                                        else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier
+                                    .onGloballyPositioned { c ->
+                                        val l = c.positionInRoot().x
+                                        val t = c.positionInRoot().y
+                                        val w = c.size.width.toFloat()
+                                        val h = c.size.height.toFloat()
+                                        if (chipLeft.size <= ord) {
+                                            chipLeft.add(l); chipTop.add(t); chipMid.add(l + w / 2); chipMidY.add(t + h / 2)
+                                        } else {
+                                            chipLeft[ord] = l; chipTop[ord] = t; chipMid[ord] = l + w / 2; chipMidY[ord] = t + h / 2
+                                        }
                                     }
-                                }
-                                .graphicsLayer {
-                                    translationX = if (dragIdx == ord) dragX else 0f
-                                    translationY = if (dragIdx == ord) -6f else 0f
-                                }
-                                .pointerInput(code, ord) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = { dragIdx = ord; dropIdx = ord },
-                                        onDrag = { change, amount ->
-                                            change.consume()
-                                            dragX = amount.x
-                                            if (chipLeft.size > ord) {
-                                                val ptrX = chipLeft[ord] + change.position.x
-                                                val ptrY = chipTop[ord] + change.position.y
-                                                dropIdx = courseCodes.indices.minByOrNull { j ->
-                                                    val dx = ptrX - chipMid[j]
-                                                    val dy = ptrY - chipMidY[j]
-                                                    dx * dx + dy * dy
-                                                } ?: ord
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            val from = dragIdx
-                                            if (from >= 0 && from != dropIdx) {
-                                                val item = courseCodes[from]
-                                                courseCodes.removeAt(from)
-                                                courseCodes.add(dropIdx, item)
-                                                setDirty()
-                                            }
-                                            dragIdx = -1; dragX = 0f; dropIdx = -1
-                                        },
-                                        onDragCancel = { dragIdx = -1; dragX = 0f; dropIdx = -1 }
-                                    )
-                                }
-                                .clickableNoRipple {
-                                    courseChecked[ord] = !courseChecked[ord]
-                                    setDirty()
-                                }
-                                .padding(end = 4.dp)
-                        ) {
-                            Text(
-                                "${code}코스(${courseColorLabel(CourseCodes.colorIndex(code))})",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                color = if (courseChecked[ord]) MaterialTheme.colorScheme.onPrimaryContainer
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                    .graphicsLayer {
+                                        translationX = if (dragIdx == ord) dragX else 0f
+                                        translationY = if (dragIdx == ord) -6f else 0f
+                                    }
+                                    .pointerInput(code, ord) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { dragIdx = ord; dropIdx = ord },
+                                            onDrag = { change, amount ->
+                                                change.consume()
+                                                dragX = amount.x
+                                                if (chipLeft.size > ord) {
+                                                    val ptrX = chipLeft[ord] + change.position.x
+                                                    val ptrY = chipTop[ord] + change.position.y
+                                                    dropIdx = courseCodes.indices.minByOrNull { j ->
+                                                        val dx = ptrX - chipMid[j]
+                                                        val dy = ptrY - chipMidY[j]
+                                                        dx * dx + dy * dy
+                                                    } ?: ord
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                val from = dragIdx
+                                                if (from >= 0 && from != dropIdx) {
+                                                    val item = courseCodes[from]
+                                                    courseCodes.removeAt(from)
+                                                    courseCodes.add(dropIdx, item)
+                                                    setDirty()
+                                                }
+                                                dragIdx = -1; dragX = 0f; dropIdx = -1
+                                            },
+                                            onDragCancel = { dragIdx = -1; dragX = 0f; dropIdx = -1 }
+                                        )
+                                    }
+                                    .clickableNoRipple { codePick = ord }
+                                    .padding(end = 2.dp)
+                            ) {
+                                Text(
+                                    "${code}코스(${courseColorLabel(CourseCodes.colorIndex(code))})",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    color = if (courseChecked[ord]) MaterialTheme.colorScheme.onPrimaryContainer
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Checkbox(
+                                checked = courseChecked[ord],
+                                onCheckedChange = { v -> courseChecked[ord] = v; setDirty() },
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Text("순서변경 : 코스명을 누른 상태로 이동  /  표시·숨김 : 코스명 클릭", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("코스명 클릭: 코스변경(중복가능)  /  체크: 표시·숨김  /  길게눌러 순서변경", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
@@ -322,7 +349,13 @@ fun RecordDetailScreen(
                         GridHeader("거리", colWidths[1])
                         GridHeader("파", colWidths[2])
                         players.forEachIndexed { i, p ->
-                            GridHeader(CleanRules.displayPlayer(p.name), colWidths[3 + i])
+                            // 4명 + 5글자 이름은 '프로' 접미어를 생략하고 글자크기를 줄여 끝까지 표시
+                            val compact = players.size >= 4 && p.name.length >= 5
+                            GridHeader(
+                                text = if (compact) p.name else CleanRules.displayPlayer(p.name),
+                                width = colWidths[3 + i],
+                                fontSize = if (compact) 9.sp else 11.sp
+                            )
                         }
                     }
                     Divider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
@@ -437,10 +470,14 @@ fun RecordDetailScreen(
     // popup
     popupTarget?.let { (pi, hi) ->
         if (players.getOrNull(pi) != null) {
+            val block = (hi / 9).coerceIn(0, courseCodes.lastIndex.coerceAtLeast(0))
+            val holeText = "${courseCodes.getOrNull(block) ?: "A"}-${hi % 9 + 1}"
             ScorePopupScreen(
                 scoreType = scoreType,
                 initial = players[pi].scores[hi],
                 par = pars[hi],
+                holeLabel = holeText,
+                playerName = CleanRules.displayPlayer(players[pi].name),
                 onDismiss = { popupTarget = null },
                 onSelect = { v ->
                     players[pi].scores[hi] = v
@@ -517,6 +554,16 @@ fun RecordDetailScreen(
                 onBack()
             }
         )
+    }
+    codePick?.let { block ->
+        if (block in courseCodes.indices) {
+            CourseCodePickerDialog(
+                title = "${block + 1}번째 9홀 코스 선택 (중복 가능)",
+                selected = courseCodes[block],
+                onSelect = { setCourseCode(block, it) },
+                onDismiss = { codePick = null }
+            )
+        }
     }
     if (showDatePick) {
         DatePickDialog(gameDate, onPick = { gameDate = it; setDirty() }, onDismiss = { showDatePick = false })
@@ -617,13 +664,18 @@ private fun saveRecord(
 class PlayerEdit(var name: String, val scores: SnapshotStateList<Int?>)
 
 @Composable
-private fun GridHeader(text: String, width: androidx.compose.ui.unit.Dp, color: androidx.compose.ui.graphics.Color? = null) {
+private fun GridHeader(
+    text: String,
+    width: androidx.compose.ui.unit.Dp,
+    color: androidx.compose.ui.graphics.Color? = null,
+    fontSize: androidx.compose.ui.unit.TextUnit = 11.sp
+) {
     Surface(color = if (color != null) color.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.width(width)) {
         Text(
             text,
             modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
             textAlign = TextAlign.Center,
-            fontSize = 11.sp,
+            fontSize = fontSize,
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )

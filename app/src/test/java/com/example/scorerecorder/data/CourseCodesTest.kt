@@ -52,6 +52,17 @@ class CourseCodesTest {
     }
 
     @Test
+    fun holesOf_loadsMatchingCodeByOccurrence_forCourseChangeReload() {
+        val p = place(listOf("A", "B"))
+        val first = CourseInfo.holesOf(p, "B", 0)
+        val second = CourseInfo.holesOf(p, "B", 1)
+
+        assertEquals(p.courses[1].distances.dropLast(1), first.first)
+        // 저장된 코스에 B가 하나뿐이면 중복 블록에서도 같은 홀 정보를 재사용
+        assertEquals(p.courses[1].pars.dropLast(1), second.second)
+    }
+
+    @Test
     fun applyToPlace_updatesMatchingCodeAndLeavesOthers() {
         val p = place(listOf("A", "B"))
         val distances = List<Int?>(18) { 200 }

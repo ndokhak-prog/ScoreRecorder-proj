@@ -129,24 +129,31 @@ fun RecordListScreen(
                                 if (best != null) {
                                     Text("우승 ${best.name}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary, maxLines = 1)
                                 }
-                                Row(verticalAlignment = Alignment.Top) {
-                                    OutlinedButton(
-                                        onClick = { RecordImage.share(context, rec) },
-                                        modifier = Modifier.defaultMinSize(minWidth = 0.dp, minHeight = 26.dp),
-                                        contentPadding = PaddingValues(horizontal = 6.dp)
+                                // 버튼을 세로로 묶어 가로폭을 줄여 선수기록이 다 보이도록 함
+                                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Column(
+                                        horizontalAlignment = Alignment.End,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
-                                        Text("공유", fontSize = 9.sp, maxLines = 1)
+                                        OutlinedButton(
+                                            onClick = { RecordImage.share(context, rec) },
+                                            modifier = Modifier.width(40.dp).height(26.dp),
+                                            contentPadding = PaddingValues(horizontal = 2.dp)
+                                        ) {
+                                            Text("공유", fontSize = 9.sp, maxLines = 1)
+                                        }
+                                        OutlinedButton(
+                                            onClick = { onCopy(rec.gameId) },
+                                            modifier = Modifier.width(40.dp).height(26.dp),
+                                            contentPadding = PaddingValues(horizontal = 2.dp)
+                                        ) {
+                                            Text("복사", fontSize = 9.sp, maxLines = 1)
+                                        }
                                     }
-                                    Spacer(Modifier.width(4.dp))
-                                    OutlinedButton(
-                                        onClick = { onCopy(rec.gameId) },
-                                        modifier = Modifier.defaultMinSize(minWidth = 0.dp, minHeight = 26.dp),
-                                        contentPadding = PaddingValues(horizontal = 6.dp)
+                                    Column(
+                                        horizontalAlignment = Alignment.End,
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
-                                        Text("복사", fontSize = 9.sp, maxLines = 1)
-                                    }
-                                    Spacer(Modifier.width(4.dp))
-                                    Column(horizontalAlignment = Alignment.End) {
                                         OutlinedButton(
                                             onClick = { message = RecordImage.saveToGallery(context, rec) },
                                             modifier = Modifier.width(62.dp).height(26.dp),

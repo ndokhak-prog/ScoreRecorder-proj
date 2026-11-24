@@ -302,7 +302,8 @@ fun NewGameScreen(
                         OutlinedTextField(
                             value = p,
                             onValueChange = { players[idx] = it.take(5) },
-                            placeholder = { Text("선수명 (5자 이내)") },
+                            label = { Text("선수명 (5자 이내)", fontSize = 11.sp) },
+                            placeholder = { Text("5자 이내", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             colors = inputFieldColors(),
                             textStyle = InputTextStyle,
                             singleLine = true,
